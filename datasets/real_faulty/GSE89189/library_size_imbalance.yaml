@@ -1,7 +1,7 @@
 dataset: GSE89189
 fault_type: library_size_imbalance
-description: "Sample 'GSM2360001' counts multiplied by 50\xD7 (original: 562,871,\
-  \ new: 28,143,550)"
+description: "Sample 'GSM2360001' counts multiplied by 50\xD7 (original: 5,478,413,\
+  \ new: 273,920,650)"
 expected_fails:
 - rule_id: NRM-002
   severity: WARNING

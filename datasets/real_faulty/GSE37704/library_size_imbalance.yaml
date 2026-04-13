@@ -1,7 +1,7 @@
 dataset: GSE37704
 fault_type: library_size_imbalance
-description: "Sample 'SRR493366' counts multiplied by 50\xD7 (original: 703,358, new:\
-  \ 35,167,900)"
+description: "Sample 'SRR493366' counts multiplied by 50\xD7 (original: 5,665,208,\
+  \ new: 283,260,400)"
 expected_fails:
 - rule_id: NRM-002
   severity: WARNING

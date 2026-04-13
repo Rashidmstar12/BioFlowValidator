@@ -195,6 +195,15 @@ class NearIdenticalSampleRule(BaseRule):
         if df.shape[1] < 2:
             return self._skip("Fewer than 2 samples; correlation check skipped.")
 
+        # Guard against transposed matrices: with >500 'samples' the pairwise
+        # correlation matrix becomes O(n²) and stalls.  FMT-008 (orientation check)
+        # handles the transposed-matrix case independently.
+        if df.shape[1] > 500:
+            return self._skip(
+                f"Sample count ({df.shape[1]}) exceeds the 500-sample limit for "
+                "pairwise correlation (possible transposed matrix; see FMT-008)."
+            )
+
         # Use log1p-transformed counts for Pearson correlation (Conesa et al. 2016)
         log_df = np.log1p(df)
         corr = log_df.corr()

@@ -3,12 +3,12 @@
   "clean_violations": [],
   "category_metrics": {
     "biology": {
-      "tp": 7,
+      "tp": 11,
       "fp": 0,
-      "fn": 4,
+      "fn": 0,
       "precision": 1.0,
-      "recall": 0.636,
-      "f1": 0.778
+      "recall": 1.0,
+      "f1": 1.0
     },
     "format": {
       "tp": 5,
@@ -45,12 +45,12 @@
   },
   "fault_type_metrics": {
     "batch_confounding": {
-      "tp": 1,
+      "tp": 5,
       "fp": 0,
-      "fn": 4,
+      "fn": 0,
       "precision": 1.0,
-      "recall": 0.2,
-      "f1": 0.333
+      "recall": 1.0,
+      "f1": 1.0
     },
     "library_size_imbalance": {
       "tp": 6,
@@ -106,7 +106,7 @@
     "total": 5
   },
   "real_summary": {
-    "passed": 31,
+    "passed": 35,
     "total": 35
   },
   "gates_passed": true,
@@ -252,15 +252,13 @@
     {
       "name": "GSE37704/batch_confounding",
       "source": "real_faulty",
-      "ok": false,
-      "tp": [],
-      "fp": [],
-      "fn": [
+      "ok": true,
+      "tp": [
         "BIO-007"
       ],
-      "violations": [
-        "FN: BIO-007 expected FAIL but did not fire"
-      ]
+      "fp": [],
+      "fn": [],
+      "violations": []
     },
     {
       "name": "GSE37704/library_size_imbalance",
@@ -331,15 +329,13 @@
     {
       "name": "GSE89189/batch_confounding",
       "source": "real_faulty",
-      "ok": false,
-      "tp": [],
-      "fp": [],
-      "fn": [
+      "ok": true,
+      "tp": [
         "BIO-007"
       ],
-      "violations": [
-        "FN: BIO-007 expected FAIL but did not fire"
-      ]
+      "fp": [],
+      "fn": [],
+      "violations": []
     },
     {
       "name": "GSE89189/library_size_imbalance",
@@ -410,15 +406,13 @@
     {
       "name": "GSE96870/batch_confounding",
       "source": "real_faulty",
-      "ok": false,
-      "tp": [],
-      "fp": [],
-      "fn": [
+      "ok": true,
+      "tp": [
         "BIO-007"
       ],
-      "violations": [
-        "FN: BIO-007 expected FAIL but did not fire"
-      ]
+      "fp": [],
+      "fn": [],
+      "violations": []
     },
     {
       "name": "GSE96870/library_size_imbalance",
@@ -489,15 +483,13 @@
     {
       "name": "airway/batch_confounding",
       "source": "real_faulty",
-      "ok": false,
-      "tp": [],
-      "fp": [],
-      "fn": [
+      "ok": true,
+      "tp": [
         "BIO-007"
       ],
-      "violations": [
-        "FN: BIO-007 expected FAIL but did not fire"
-      ]
+      "fp": [],
+      "fn": [],
+      "violations": []
     },
     {
       "name": "airway/library_size_imbalance",
