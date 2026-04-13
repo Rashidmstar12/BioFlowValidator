@@ -174,6 +174,14 @@ def _compute_metrics(tp: int, fp: int, fn: int) -> dict:
             "f1": round(f1, 3)}
 
 
+def _get_benchmark_mode(ds_dir: Path) -> str:
+    """Read benchmark_mode.txt; return 'proxy' or 'true_public_data'."""
+    bm_file = ds_dir / "benchmark_mode.txt"
+    if bm_file.exists():
+        return bm_file.read_text().strip()
+    return "proxy"
+
+
 # ---------------------------------------------------------------------------
 # Clean dataset false positive check
 # ---------------------------------------------------------------------------
@@ -182,6 +190,7 @@ def check_clean_datasets() -> tuple[int, list[str]]:
     """Run validator on all clean real datasets; return (fp_count, violation_list)."""
     fp_count = 0
     violations = []
+    dataset_modes: dict[str, str] = {}
 
     # Special case: GSE144269 is intentionally single-condition (BIO-001 expected)
     intentional_fails = {
@@ -196,6 +205,9 @@ def check_clean_datasets() -> tuple[int, list[str]]:
         if not count_path.exists():
             continue
 
+        mode = _get_benchmark_mode(ds_dir)
+        dataset_modes[ds_dir.name] = mode
+
         results = _run_validator(count_path, meta_path if meta_path.exists() else None)
         allowed = intentional_fails.get(ds_dir.name, set())
 
@@ -204,11 +216,11 @@ def check_clean_datasets() -> tuple[int, list[str]]:
                 if r.rule_id not in allowed:
                     fp_count += 1
                     violations.append(
-                        f"CLEAN_FP [{ds_dir.name}]: {r.rule_id} "
+                        f"CLEAN_FP [{ds_dir.name}|{mode}]: {r.rule_id} "
                         f"({r.severity}) — {r.message[:100]}"
                     )
 
-    return fp_count, violations
+    return fp_count, violations, dataset_modes
 
 
 # ---------------------------------------------------------------------------
@@ -390,6 +402,7 @@ def print_report(
     all_cases: list[dict],
     clean_fp: int,
     clean_violations: list[str],
+    dataset_modes: dict[str, str] | None = None,
     strict: bool = False,
 ) -> tuple[str, dict, bool]:
     """Build Markdown report + JSON summary. Returns (markdown, json_data, passed_gates)."""
@@ -401,6 +414,30 @@ def print_report(
     ft_metrics = _fault_type_metrics(all_cases)
 
     lines = ["# BioFlowValidator Benchmark Results", ""]
+
+    # ── Dataset inventory (benchmark mode) ───────────────────────────────
+    if dataset_modes:
+        lines += ["## Dataset Inventory", ""]
+        lines.append("| Dataset | Benchmark Mode |")
+        lines.append("|---|---|")
+        for ds_name, mode in sorted(dataset_modes.items()):
+            marker = "✅ true_public_data" if mode == "true_public_data" else "⚙️  proxy"
+            lines.append(f"| {ds_name} | {marker} |")
+        has_real = any(m == "true_public_data" for m in dataset_modes.values())
+        has_proxy = any(m == "proxy" for m in dataset_modes.values())
+        if has_proxy and not has_real:
+            lines.append("")
+            lines.append(
+                "> ⚠️  All datasets are **proxy** (structural synthetic data). "
+                "Run `python datasets/ingest_real_data.py` to ingest true GEO data."
+            )
+        elif has_proxy and has_real:
+            lines.append("")
+            lines.append(
+                "> ⚠️  Mixed benchmark: some datasets are proxies, some are true_public_data. "
+                "F1 scores reflect proxy quality for proxy datasets."
+            )
+        lines.append("")
 
     # ── Clean dataset FP check ────────────────────────────────────────────
     lines += ["## Clean Dataset False Positive Check", ""]
@@ -481,6 +518,7 @@ def print_report(
     json_data = {
         "clean_fp_count": clean_fp,
         "clean_violations": clean_violations,
+        "dataset_modes": dataset_modes or {},
         "category_metrics": cat_metrics,
         "fault_type_metrics": ft_metrics,
         "synthetic_summary": {"passed": synth_pass, "total": synth_total},
@@ -531,10 +569,10 @@ def main() -> None:
 
     # Clean dataset check
     if args.skip_clean:
-        clean_fp, clean_violations = 0, []
+        clean_fp, clean_violations, dataset_modes = 0, [], {}
     else:
         print("Checking clean datasets for false positives …")
-        clean_fp, clean_violations = check_clean_datasets()
+        clean_fp, clean_violations, dataset_modes = check_clean_datasets()
         print(f"  Clean FP: {clean_fp}\n")
 
     # Synthetic benchmark
@@ -550,7 +588,7 @@ def main() -> None:
     all_cases = synth_cases + real_cases
 
     markdown, json_data, gates_pass = print_report(
-        all_cases, clean_fp, clean_violations, strict=args.strict
+        all_cases, clean_fp, clean_violations, dataset_modes=dataset_modes, strict=args.strict
     )
 
     print(markdown)

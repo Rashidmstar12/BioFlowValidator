@@ -60,6 +60,13 @@ class LibrarySizeRule(BaseRule):
     # (e.g. Bioconductor RNA-seq vignettes); no single paper defines it as a
     # hard cutoff.  Reviewers should note that 5× imbalance can also bias
     # DESeq2 size factors in small experiments — this threshold is conservative.
+    #
+    # Threshold comparison is STRICT (> 10, not >= 10):
+    #   ratio = 10.000 → PASS (exact equality does not trigger the warning)
+    #   ratio = 10.001 → FAIL
+    # This is intentional to avoid false positives at the exact boundary, which
+    # can arise from rounding when counts are multiplied by a scale factor.
+    # See datasets/fault_severity_results.md for the detected boundary.
     _RATIO_THRESHOLD = 10
 
     def run(self, context: ValidationContext) -> RuleResult:

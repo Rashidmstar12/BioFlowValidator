@@ -1,6 +1,16 @@
 {
   "clean_fp_count": 0,
   "clean_violations": [],
+  "dataset_modes": {
+    "GSE107011": "proxy",
+    "GSE144269": "proxy",
+    "GSE37704": "proxy",
+    "GSE52778": "proxy",
+    "GSE60450": "proxy",
+    "GSE89189": "proxy",
+    "GSE96870": "proxy",
+    "airway": "proxy"
+  },
   "category_metrics": {
     "biology": {
       "tp": 14,

@@ -478,6 +478,19 @@ class BatchConfoundingRule(BaseRule):
     # If the average expected cell frequency in the contingency table falls
     # below this value, Cramér's V is unreliable (over-estimates association).
     _MIN_EXPECTED_CELL_COUNT = 5
+    #
+    # ── Small-sample 2×2 table behaviour ─────────────────────────────────────
+    # In a 2-condition × 2-batch design with small N, the Cramér's V takes only
+    # discrete values (0 or 1 for perfectly (un)balanced tables).  This means:
+    #   - A balanced design (each batch has both conditions) → V = 0 → PASS
+    #   - A confounded design (each batch has only one condition) → V = 1 → ERROR
+    #   - Partial confounding with N ≤ 12 often yields V > 0.7 directly → ERROR
+    #     without passing through the WARNING range (0.7 < V < 0.999).
+    # This is a property of the discrete chi-squared distribution, not a bug.
+    # Larger N and/or more factor levels allow V to fall in the WARNING range.
+    # The small-N caveat is attached to the output via the _MIN_EXPECTED_CELL_COUNT
+    # guard when avg expected cell count < 5 (Cochran 1954).
+    # See datasets/fault_severity_results.md for the empirically verified boundary.
 
     def _find_col(self, meta: pd.DataFrame, candidates: tuple) -> str | None:
         for col in meta.columns:

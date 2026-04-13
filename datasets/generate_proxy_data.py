@@ -502,6 +502,12 @@ def _write_checksums(out_dir: Path) -> None:
             digest = hashlib.sha256(fpath.read_bytes()).hexdigest()
             lines.append(f"{digest}  {fname}\n")
     (out_dir / "sha256sums.txt").write_text("".join(lines))
+    # Write a benchmark mode marker so benchmark_eval.py can distinguish
+    # proxy datasets from true_public_data datasets.
+    # This file is overwritten by ingest_real_data.py when true data is ingested.
+    bm_path = out_dir / "benchmark_mode.txt"
+    if not bm_path.exists():
+        bm_path.write_text("proxy\n")
 
 
 # ---------------------------------------------------------------------------

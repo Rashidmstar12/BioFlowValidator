@@ -1,0 +1,212 @@
+# BioFlowValidator Benchmark Manifest
+#
+# This file records every dataset used in the benchmark, its source type
+# (proxy vs true_public_data), checksums, and preparation steps.
+#
+# benchmark_mode:
+#   proxy           — structurally faithful NB-simulated count matrix.
+#                     Used for CI/CD benchmarking where GEO FTP is unavailable.
+#   true_public_data — actual raw GEO download, verified integer counts,
+#                     real biological signal.  Must be generated outside CI.
+#
+# To switch a dataset from proxy to true_public_data:
+#   1. Download the real data: python datasets/fetch_real_data.py --dataset <NAME>
+#      (or follow the manual steps in datasets/real/<NAME>/README.md)
+#   2. Re-run checksums: python datasets/ingest_real_data.py --dataset <NAME>
+#   3. Update source_type to "true_public_data" below.
+#   4. Run: PYTHONPATH=backend python datasets/benchmark_eval.py --strict
+#   5. Copy benchmark_results.json into datasets/external_benchmark_<NAME>.md
+
+schema_version: "1.0"
+generated: "2026-04-13"
+generator: datasets/benchmark_manifest.yaml
+
+datasets:
+
+  - name: airway
+    geo_accession: GSE52778
+    paper: "Himes et al. 2014, PLOS ONE, doi:10.1371/journal.pone.0099625"
+    organism: human
+    gene_id_type: Ensembl (ENSG)
+    n_samples: 8
+    n_genes_proxy: 5010
+    n_genes_real: ~63677
+    design: "4 cell lines × 2 conditions (untreated / dexamethasone)"
+    batch_column: cell_line
+    condition_column: condition
+    source_type: proxy
+    proxy_seed: 1
+    counts_sha256: ""  # populated by ingest_real_data.py
+    metadata_sha256: ""
+    benchmark_role: main_clean_benchmark
+    notes: >
+      Bioconductor airway package equivalent. Same data as GSE52778 but with
+      simplified sample naming. Cell line used as batch column (paired design).
+      BIO-007 warning expected: paired design creates near-confounded batch/condition.
+
+  - name: GSE37704
+    geo_accession: GSE37704
+    paper: "Trapnell et al. 2014, Nature Biotechnology"
+    organism: human
+    gene_id_type: Ensembl (ENSG)
+    n_samples: 6
+    n_genes_proxy: 5010
+    n_genes_real: ~19000
+    design: "HOXA1 knockdown vs control, 3 reps each"
+    batch_column: batch
+    condition_column: condition
+    source_type: proxy
+    proxy_seed: 2
+    counts_sha256: ""
+    metadata_sha256: ""
+    benchmark_role: main_clean_benchmark
+    notes: >
+      Simple 2-group DE design. Interleaved batches ensure BIO-007 does not
+      fire on the clean dataset.
+
+  - name: GSE89189
+    geo_accession: GSE89189
+    paper: "Mouse macrophage LPS stimulation"
+    organism: mouse
+    gene_id_type: Ensembl (ENSMUSG)
+    n_samples: 6
+    n_genes_proxy: 5010
+    n_genes_real: ~14000
+    design: "unstimulated vs LPS, 3 reps each"
+    batch_column: batch
+    condition_column: condition
+    source_type: proxy
+    proxy_seed: 3
+    counts_sha256: ""
+    metadata_sha256: ""
+    benchmark_role: main_clean_benchmark
+    notes: >
+      Tests GEN-005 mouse-organism detection branch (ENSMUSG IDs).
+      Single batch so BIO-007 SKIPs.
+
+  - name: GSE96870
+    geo_accession: GSE96870
+    paper: "Multi-factor time-course human dataset"
+    organism: human
+    gene_id_type: Ensembl (ENSG)
+    n_samples: 12
+    n_genes_proxy: 5010
+    n_genes_real: ~20000
+    design: "3 time points × 4 replicates each, sex as additional factor"
+    batch_column: batch
+    condition_column: condition
+    source_type: proxy
+    proxy_seed: 4
+    counts_sha256: ""
+    metadata_sha256: ""
+    benchmark_role: stress_test
+    notes: >
+      Multi-factor design. Balanced batch assignment across all conditions so
+      BIO-007 does not fire on the clean dataset.
+
+  - name: GSE144269
+    geo_accession: GSE144269
+    paper: "Single-condition submission (mislabeled)"
+    organism: human
+    gene_id_type: Ensembl (ENSG)
+    n_samples: 6
+    n_genes_proxy: 5010
+    n_genes_real: ~20000
+    design: "All samples labeled 'tumor' (edge case: single condition)"
+    batch_column: batch
+    condition_column: condition
+    source_type: proxy
+    proxy_seed: 5
+    counts_sha256: ""
+    metadata_sha256: ""
+    benchmark_role: edge_case
+    notes: >
+      BIO-001 fires (single condition) by design — intentional expected failure.
+      Not counted as FP in benchmark.
+
+  - name: GSE52778
+    geo_accession: GSE52778
+    paper: "Himes et al. 2014, PLOS ONE, doi:10.1371/journal.pone.0099625"
+    organism: human
+    gene_id_type: Ensembl (ENSG)
+    n_samples: 8
+    n_genes_proxy: 5010
+    n_genes_real: ~33469
+    design: "4 cell lines × 2 conditions (GEO-style GSM sample naming)"
+    batch_column: batch  # cell line as batch
+    condition_column: condition
+    source_type: proxy
+    proxy_seed: 6
+    counts_sha256: ""
+    metadata_sha256: ""
+    benchmark_role: main_clean_benchmark
+    notes: >
+      Same experiment as airway dataset above, but using GEO supplementary file
+      naming conventions. Tests robustness to GSM-style sample ID formats.
+      GEO real file: GSE52778_pairedsamplesdge.tsv.gz (~33,469 genes).
+
+  - name: GSE60450
+    geo_accession: GSE60450
+    paper: "Law et al. 2014, Genome Biology, doi:10.1186/gb-2014-15-2-r29"
+    organism: mouse
+    gene_id_type: Entrez (numeric strings)
+    n_samples: 12
+    n_genes_proxy: 5000
+    n_genes_real: 27179
+    design: "basal vs luminal cells × 3 developmental stages (virgin/pregnant/lactating)"
+    batch_column: batch  # developmental stage as batch
+    condition_column: condition  # cell type as condition
+    source_type: proxy
+    proxy_seed: 7
+    counts_sha256: ""
+    metadata_sha256: ""
+    benchmark_role: stress_test
+    notes: >
+      Critical for testing Entrez gene ID namespace (GEN-001 entrez branch,
+      GEN-005 INFO result — organism not determinable from Entrez IDs).
+      Real data file: GSE60450_Lactation-GenewiseCounts.txt.gz from GEO FTP.
+      Expected GEN-005 result: INFO (Entrez IDs cannot identify organism).
+
+  - name: GSE107011
+    geo_accession: GSE107011
+    paper: "Monaco et al. 2019, Cell Reports, doi:10.1016/j.celrep.2019.01.041"
+    organism: human
+    gene_id_type: Ensembl (ENSG)
+    n_samples: 28  # proxy; real = 114
+    n_genes_proxy: 5010
+    n_genes_real: ~20396
+    design: "7 cell types × 4 donors (PBMC immune cell atlas, subset of 114 real samples)"
+    batch_column: batch  # donor as batch
+    condition_column: condition  # cell type as condition
+    source_type: proxy
+    proxy_seed: 8
+    counts_sha256: ""
+    metadata_sha256: ""
+    benchmark_role: stress_test
+    notes: >
+      Largest dataset. 7 conditions × 4 batches; avg expected cell = 1.0 (<5),
+      so BIO-007 appends Cochran 1954 small-N caveat on any confounding result.
+      Real file: GSE107011_ProcessedCounts_TPM.txt.gz — NOTE: TPM not raw counts.
+      Raw counts require separate download from SRA or ArrayExpress.
+      Expected: NRM-001 FAIL if TPM file used accidentally (non-integer values).
+
+benchmark_fault_types:
+  - sample_label_mismatch     # F1: SMP-001
+  - mixed_gene_ids             # F2: GEN-001
+  - transposed_matrix          # F3: FMT-008
+  - batch_confounding          # F4: BIO-007 (requires scipy>=1.11)
+  - low_replicates             # F5: SMP-004
+  - library_size_imbalance     # F6: NRM-002
+  - normalized_not_raw         # F7: NRM-001
+
+benchmark_cases:
+  synthetic: 5
+  real_faulty: 56  # 8 datasets × 7 fault types
+  total: 61
+
+last_run:
+  date: "2026-04-13"
+  scipy_version: "1.17.1"
+  python_version: "3.12"
+  all_cases_passed: true
+  results_file: datasets/benchmark_results.json

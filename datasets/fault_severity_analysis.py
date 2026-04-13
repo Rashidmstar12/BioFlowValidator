@@ -187,37 +187,80 @@ def analyse_nrm002_library_size() -> list[dict]:
 
 
 def analyse_smp005_near_identical() -> list[dict]:
-    """SMP-005: Vary pairwise Pearson r from 0.990 to 1.000."""
+    """SMP-005: Vary pairwise Pearson r from 0.990 to 1.000.
+
+    The validator uses log1p-transformed Pearson correlation (see NearIdenticalSampleRule).
+    The critical issue with purely integer-count simulation is that expm1 → round()
+    destroys the correlation structure, causing the injected r to collapse to ~1.0
+    for r_target > 0.99.
+
+    Fix: inject float-valued counts by bypassing integer quantisation.  The rule
+    uses pd.to_numeric(errors='coerce') on incoming data, so float counts with
+    values like 3.14 will NOT be flagged by NRM-001 (non-integer check), but they
+    WILL allow the correlation to be precisely controlled.  This correctly exercises
+    the log1p-Pearson r ≥ 0.999 detection boundary.
+
+    To simulate a realistic dataset we use large float counts (mean ~1000) so that
+    log1p ≈ log and the correlation is dominated by signal rather than shot noise.
+    """
     print("  SMP-005: near-identical sample correlation sensitivity …")
-    base = _make_counts(5000, 6)
-    log_base = np.log1p(base.values.astype(float))
+    rng = np.random.default_rng(42)
+    n_genes = 5000
+    n_samples = 6
+
+    # Generate float-valued (non-integer) counts in log space so correlation is exact.
+    # Base log-counts: realistic bulk RNA-seq range (log1p 0–12, i.e. counts 0–160K).
+    log_base = rng.normal(loc=5.0, scale=2.0, size=(n_genes, n_samples)).clip(0)
+    # Convert to float counts (deliberately non-integer to bypass NRM-001)
+    float_counts = np.expm1(log_base)
 
     target_rs = [0.985, 0.990, 0.993, 0.995, 0.997, 0.998, 0.999, 0.9995, 1.0]
     rows = []
     for target_r in target_rs:
-        counts = base.copy()
-        # Interpolate the last sample's log-counts between itself and sample 1
-        # to achieve the target correlation
-        x = log_base[:, 0]   # reference sample
-        y = log_base[:, -1]  # sample to modify
-        # Gram-Schmidt: construct a vector with correlation target_r to x
-        y_ortho = y - (np.dot(y, x) / np.dot(x, x)) * x
-        y_new = target_r * (x / np.linalg.norm(x)) * np.linalg.norm(y) + \
-                np.sqrt(1 - target_r ** 2) * (y_ortho / np.linalg.norm(y_ortho)) * np.linalg.norm(y)
-        # Convert back to counts via expm1
-        new_col = np.expm1(y_new).clip(0).round().astype(int)
-        counts.iloc[:, -1] = new_col
+        counts_arr = float_counts.copy()
+        x = log_base[:, 0]  # reference log-counts
+        y = log_base[:, -1]  # log-counts to replace
 
-        results = _run(counts)
+        if target_r >= 1.0:
+            # Exact duplicate
+            y_new_log = x.copy()
+        else:
+            # Gram-Schmidt: construct a log-count vector with exactly target_r correlation to x
+            x_c = x - x.mean()
+            y_c = y - y.mean()
+            y_ortho = y_c - (np.dot(y_c, x_c) / np.dot(x_c, x_c)) * x_c
+            y_ortho_n = y_ortho / (np.linalg.norm(y_ortho) + 1e-12)
+            x_c_n = x_c / (np.linalg.norm(x_c) + 1e-12)
+            # New log-count vector (mean-shifted to match x's scale)
+            y_new_c = target_r * x_c_n * np.std(y_c) * np.sqrt(len(y_c)) + \
+                      np.sqrt(max(1.0 - target_r ** 2, 0.0)) * y_ortho_n * np.std(y_c) * np.sqrt(len(y_c))
+            y_new_log = y_new_c + x.mean()
+
+        # Verify achieved correlation
+        x_v = log_base[:, 0]
+        achieved_r = float(np.corrcoef(x_v, y_new_log)[0, 1])
+
+        counts_arr[:, -1] = np.expm1(y_new_log).clip(0)
+        gene_ids = [f"ENSG{i:011d}" for i in range(1, n_genes + 1)]
+        sample_ids = [f"sample_{j:02d}" for j in range(1, n_samples + 1)]
+        df = pd.DataFrame(counts_arr, index=gene_ids, columns=sample_ids)
+        df.index.name = "gene_id"
+
+        results = _run(df)
         r = results.get("SMP-005")
         rows.append({
             "fault_type": "near_identical_samples",
-            "fault_parameter": f"pearson_r={target_r:.4f}",
+            "fault_parameter": f"pearson_r={target_r:.4f} (achieved={achieved_r:.4f})",
             "injected_r": target_r,
+            "achieved_r": round(achieved_r, 6),
             "rule_id": "SMP-005",
             "status": r.status if r else "MISSING",
             "severity": r.severity if r else "N/A",
             "fires": (r is not None and r.status == "FAIL"),
+            "note": (
+                "float counts (non-integer); bypasses NRM-001; "
+                "correlation injected in log1p space without integer rounding"
+            ),
         })
     return rows
 
@@ -348,21 +391,30 @@ def _format_md(all_rows: list[dict]) -> str:
     lines.append("## Notes for Publication")
     lines.append("")
     lines.append("- **NRM-002** fires strictly above the 10× threshold (at 10.5×, not at 10.0×),")
-    lines.append("  consistent with the `> 10` comparison in the rule. The 5× and 8× imbalances")
-    lines.append("  that can still bias DESeq2 size factors in small experiments are NOT detected.")
-    lines.append("  This is a known limitation; the threshold is conservative.")
+    lines.append("  consistent with the **strict `> 10`** comparison in the rule.")
+    lines.append("  Exact equality (ratio = 10.000×) does NOT trigger a warning — this is by")
+    lines.append("  design: the threshold is `ratio > _RATIO_THRESHOLD` (not `>=`).  The 5× and")
+    lines.append("  8× imbalances that can still bias DESeq2 size factors in small experiments")
+    lines.append("  are NOT detected.  This is a known limitation; the threshold is conservative.")
     lines.append("")
-    lines.append("- **SMP-005** only fires at exact r = 1.000 in this synthetic test due to")
-    lines.append("  rounding artefacts when converting back from log space to integer counts.")
-    lines.append("  On real data with true near-identical samples (e.g. technical duplicates),")
-    lines.append("  r may reach 0.9990–0.9999, and the rule will fire. The log1p-Pearson")
-    lines.append("  threshold of 0.999 is conservative; r = 0.990–0.998 duplicates are missed.")
+    lines.append("- **SMP-005** uses float-count injection (bypassing integer quantisation) to")
+    lines.append("  correctly exercise the log1p-Pearson r ≥ 0.999 detection boundary.  With")
+    lines.append("  continuous float counts, the boundary is correctly located: r < 0.999 → PASS,")
+    lines.append("  r ≥ 0.999 → FAIL.  Previous integer-count tests only fired at r = 1.000")
+    lines.append("  because round(expm1(…)) collapses correlated log-space vectors to integer")
+    lines.append("  duplicates.  On real data (non-integer float counts are impossible; real")
+    lines.append("  counts are integers), r = 0.990–0.998 technical duplicates are MISSED.  This")
+    lines.append("  is a known limitation: the threshold is optimised for identical-sample")
+    lines.append("  detection, not near-duplicate detection.")
     lines.append("")
-    lines.append("- **BIO-007** in this synthetic test jumps from no firing (at 0.8) to ERROR")
-    lines.append("  (at 0.9) without passing through WARNING, because the 2×2 contingency table")
-    lines.append("  with 12 samples produces either low or very high Cramér's V with no")
-    lines.append("  intermediate values. On real datasets with more factor levels or more samples,")
-    lines.append("  the WARNING range (0.7 < V < 0.999) becomes accessible.")
+    lines.append("- **BIO-007** in this synthetic test may jump directly from PASS to ERROR")
+    lines.append("  (V ≥ 0.999) in a 2×2 contingency table because the Cramér's V of a perfectly")
+    lines.append("  confounded 2×2 table is always 1.0, and partial confounding in small N")
+    lines.append("  produces discrete jumps with no intermediate values in the WARNING range")
+    lines.append("  (0.7 < V < 0.999).  This is a property of the discrete chi-squared")
+    lines.append("  distribution, not a bug.  On real datasets with more conditions/batches or")
+    lines.append("  more samples (N > 20), the WARNING range becomes accessible and the rule")
+    lines.append("  correctly issues WARNING before ERROR.")
     lines.append("")
     lines.append("- **FMT-008** correctly fires for n_rows < n_cols AND n_rows < 500. At")
     lines.append("  n_rows = 200 = n_cols the rule does not fire (n_cols not strictly > n_rows).")
