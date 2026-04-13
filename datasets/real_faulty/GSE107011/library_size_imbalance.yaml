@@ -1,0 +1,12 @@
+dataset: GSE107011
+fault_type: library_size_imbalance
+description: "Sample 'CD4Tcm_Donor1' counts multiplied by 50\xD7 (original: 5,527,205,\
+  \ new: 276,360,250)"
+expected_fails:
+- rule_id: NRM-002
+  severity: WARNING
+  min_affected_items: 1
+expected_passes: []
+expected_skips: []
+notes: "NRM-002 must FAIL because max/min library size ratio will exceed 10\xD7. The\
+  \ inflated sample is 'CD4Tcm_Donor1'."

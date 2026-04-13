@@ -1,0 +1,12 @@
+dataset: GSE52778
+fault_type: batch_confounding
+description: "Batch column added so each condition maps to exactly one batch (Cram\xE9\
+  r's V = 1.0). Condition column: 'condition'"
+expected_fails:
+- rule_id: BIO-007
+  severity: ERROR
+  min_affected_items: 1
+expected_passes: []
+expected_skips: []
+notes: "Batch column added so each condition maps to exactly one batch (Cram\xE9r's\
+  \ V = 1.0). Condition column: 'condition'"

@@ -336,6 +336,161 @@ def generate_gse144269(out_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Dataset 6: GSE52778 (GEO-style naming proxy)
+# Human airway smooth muscle, Himes et al. 2014 — direct GEO download variant.
+# Same data as the Bioconductor 'airway' package (already proxied above).
+# This proxy mimics the GEO supplementary file naming conventions used by
+# fetch_gse52778(): GSM-style sample IDs + dex/untreated treatment labels.
+#
+# Real data: 8 samples × ~33,000 human Ensembl genes
+# Proxy: 8 samples × 5,000 genes (representative subset)
+# ---------------------------------------------------------------------------
+
+def generate_gse52778(out_dir: Path) -> None:
+    rng = np.random.default_rng(6)
+    # GSM IDs corresponding to the 4 cell lines used in Himes et al. 2014
+    cell_lines = ["GSM1275862", "GSM1275863", "GSM1275870", "GSM1275871"]
+    conditions_per_line = ["untreated", "dex"]
+    samples = [
+        f"{cell}_{cond}"
+        for cell in cell_lines
+        for cond in conditions_per_line
+    ]
+    condition_labels = [cond for _ in cell_lines for cond in conditions_per_line]
+    cell_line_labels = [cell for cell in cell_lines for _ in conditions_per_line]
+
+    n_genes = 5_000  # proxy: real GSE52778 has ~33,469 Ensembl genes
+    genes = _human_ensembl(n_genes, rng)
+    hk_ids = [
+        "ENSG00000075624", "ENSG00000111640", "ENSG00000166710",
+        "ENSG00000165704", "ENSG00000256269", "ENSG00000073578",
+        "ENSG00000112592", "ENSG00000089157", "ENSG00000164924",
+        "ENSG00000196262",
+    ]
+    genes = hk_ids + [g for g in genes if g not in set(hk_ids)]
+
+    counts = _make_counts(genes, samples, condition_labels, seed=6)
+    meta = pd.DataFrame({
+        "condition": condition_labels,
+        "batch": cell_line_labels,  # cell line as batch (paired design)
+    }, index=samples)
+    meta.index.name = "sample_id"
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    counts.to_csv(out_dir / "counts.tsv", sep="\t")
+    meta.to_csv(out_dir / "metadata.tsv", sep="\t")
+    _write_checksums(out_dir)
+
+
+# ---------------------------------------------------------------------------
+# Dataset 7: GSE60450
+# Mouse mammary gland, Law et al. 2014 (limma/voom paper)
+# 12 samples: 6 basal × 6 luminal cells across 3 developmental stages
+# Gene IDs: Entrez (numeric strings) — differs from Ensembl datasets above
+#
+# Real data: 12 samples × 27,179 mouse genes (Entrez IDs)
+# Proxy: 12 samples × 5,000 genes (Entrez-format numeric IDs)
+#
+# Key characteristics that trigger specific rules:
+#   GEN-001: single consistent Entrez namespace → PASS
+#   GEN-005: organism not determinable from Entrez IDs → INFO (expected)
+#   BIO-007: cell_type correlated with condition if batch not accounted for
+#   BIO-005: some mouse mammary genes have high dominance in certain stages
+# ---------------------------------------------------------------------------
+
+def generate_gse60450(out_dir: Path) -> None:
+    rng = np.random.default_rng(7)
+    # Balanced 2×3 design: 2 cell types × 3 stages × 2 replicates each = 12 samples
+    # Basal cells: MCL1.DG, MCL1.DH (virgin), MCL1.DI, MCL1.DJ (pregnant),
+    #              MCL1.DK, MCL1.DL (lactating)
+    # Luminal cells: MCL1.LA, MCL1.LB (virgin), MCL1.LC, MCL1.LD (pregnant),
+    #                MCL1.LE, MCL1.LF (lactating)
+    cell_types = (["basal"] * 6) + (["luminal"] * 6)
+    stages = ["virgin", "virgin", "pregnant", "pregnant", "lactating", "lactating"] * 2
+    samples = [
+        "MCL1.DG", "MCL1.DH", "MCL1.DI", "MCL1.DJ", "MCL1.DK", "MCL1.DL",
+        "MCL1.LA", "MCL1.LB", "MCL1.LC", "MCL1.LD", "MCL1.LE", "MCL1.LF",
+    ]
+
+    n_genes = 5_000  # proxy: real GSE60450 has 27,179 Entrez genes
+    # Generate Entrez-format IDs: numeric strings in the range 100–10,000,000
+    # Entrez gene IDs for Mus musculus range from ~11287 to ~108168434.
+    # We use a realistic subset from a shuffled pool so IDs are non-sequential.
+    entrez_pool_size = 30_000
+    entrez_numbers = rng.choice(
+        np.arange(11_287, 11_287 + entrez_pool_size * 3),
+        size=entrez_pool_size,
+        replace=False,
+    )
+    entrez_pool = [str(n) for n in entrez_numbers]
+    genes = entrez_pool[:n_genes]
+
+    counts = _make_counts(genes, samples, cell_types, seed=7)
+    meta = pd.DataFrame({
+        "condition": cell_types,
+        "batch": stages,  # developmental stage as batch factor
+    }, index=samples)
+    meta.index.name = "sample_id"
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    counts.to_csv(out_dir / "counts.tsv", sep="\t")
+    meta.to_csv(out_dir / "metadata.tsv", sep="\t")
+    _write_checksums(out_dir)
+
+
+# ---------------------------------------------------------------------------
+# Dataset 8: GSE107011
+# Human PBMC immune cells, Monaco et al. 2019 (Cell Reports)
+# 28 samples: 7 representative cell types × 4 donors
+# (Proxy uses 7/29 cell types to keep file size manageable; real=114 samples)
+#
+# Real data: 114 samples (29 cell types × 4 donors) × ~20,000 human genes
+# Proxy: 28 samples × 5,000 genes
+#
+# Key characteristics:
+#   BIO-005: haemoglobin genes dominate erythroblasts → legitimate WARNING
+#   BIO-006: granulocyte MT fraction elevated → FP risk; caveat expected
+#   BIO-007: donor (batch) vs cell_type (condition) cross-classified design
+#   SMP-004: 4 replicates per cell type → PASS
+#   GEN-005: human ENSG IDs → organism=human
+# ---------------------------------------------------------------------------
+
+def generate_gse107011(out_dir: Path) -> None:
+    rng = np.random.default_rng(8)
+    # 7 representative immune cell types × 4 donors = 28 samples
+    cell_types_all = [
+        "CD4Tcm", "CD8Tem", "NK", "Monocyte_classical",
+        "Plasmablast", "Basophil", "pDC",
+    ]
+    donors = ["Donor1", "Donor2", "Donor3", "Donor4"]
+    samples = [f"{ct}_{d}" for ct in cell_types_all for d in donors]
+    condition_labels = [ct for ct in cell_types_all for _ in donors]
+    donor_labels = [d for _ in cell_types_all for d in donors]
+
+    n_genes = 5_000  # proxy: real GSE107011 has ~20,396 genes
+    genes = _human_ensembl(n_genes, rng)
+    hk_ids = [
+        "ENSG00000075624", "ENSG00000111640", "ENSG00000166710",
+        "ENSG00000165704", "ENSG00000256269", "ENSG00000073578",
+        "ENSG00000112592", "ENSG00000089157", "ENSG00000164924",
+        "ENSG00000196262",
+    ]
+    genes = hk_ids + [g for g in genes if g not in set(hk_ids)]
+
+    counts = _make_counts(genes, samples, condition_labels, seed=8)
+    meta = pd.DataFrame({
+        "condition": condition_labels,  # cell type as condition
+        "batch": donor_labels,          # donor as batch
+    }, index=samples)
+    meta.index.name = "sample_id"
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    counts.to_csv(out_dir / "counts.tsv", sep="\t")
+    meta.to_csv(out_dir / "metadata.tsv", sep="\t")
+    _write_checksums(out_dir)
+
+
+# ---------------------------------------------------------------------------
 # Checksum helper
 # ---------------------------------------------------------------------------
 
@@ -359,6 +514,9 @@ GENERATORS = {
     "GSE89189": generate_gse89189,
     "GSE96870": generate_gse96870,
     "GSE144269": generate_gse144269,
+    "GSE52778": generate_gse52778,
+    "GSE60450": generate_gse60450,
+    "GSE107011": generate_gse107011,
 }
 
 

@@ -3,7 +3,7 @@
   "clean_violations": [],
   "category_metrics": {
     "biology": {
-      "tp": 11,
+      "tp": 14,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -11,7 +11,7 @@
       "f1": 1.0
     },
     "format": {
-      "tp": 5,
+      "tp": 8,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -19,7 +19,7 @@
       "f1": 1.0
     },
     "gene": {
-      "tp": 7,
+      "tp": 10,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -27,7 +27,7 @@
       "f1": 1.0
     },
     "normalization": {
-      "tp": 11,
+      "tp": 17,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -35,7 +35,7 @@
       "f1": 1.0
     },
     "sample": {
-      "tp": 12,
+      "tp": 18,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -45,7 +45,7 @@
   },
   "fault_type_metrics": {
     "batch_confounding": {
-      "tp": 5,
+      "tp": 8,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -53,7 +53,7 @@
       "f1": 1.0
     },
     "library_size_imbalance": {
-      "tp": 6,
+      "tp": 9,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -61,7 +61,7 @@
       "f1": 1.0
     },
     "low_replicates": {
-      "tp": 6,
+      "tp": 9,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -69,7 +69,7 @@
       "f1": 1.0
     },
     "mixed_gene_ids": {
-      "tp": 6,
+      "tp": 9,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -77,7 +77,7 @@
       "f1": 1.0
     },
     "normalized_not_raw": {
-      "tp": 6,
+      "tp": 9,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -85,7 +85,7 @@
       "f1": 1.0
     },
     "sample_label_mismatch": {
-      "tp": 6,
+      "tp": 9,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -93,7 +93,7 @@
       "f1": 1.0
     },
     "transposed_matrix": {
-      "tp": 6,
+      "tp": 9,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -106,8 +106,8 @@
     "total": 5
   },
   "real_summary": {
-    "passed": 35,
-    "total": 35
+    "passed": 56,
+    "total": 56
   },
   "gates_passed": true,
   "cases": [
@@ -161,6 +161,83 @@
       "ok": true,
       "tp": [
         "GEN-003"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE107011/batch_confounding",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "BIO-007"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE107011/library_size_imbalance",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-002"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE107011/low_replicates",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-004"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE107011/mixed_gene_ids",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "GEN-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE107011/normalized_not_raw",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE107011/sample_label_mismatch",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE107011/transposed_matrix",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "FMT-008"
       ],
       "fp": [],
       "fn": [],
@@ -317,6 +394,160 @@
     },
     {
       "name": "GSE37704/transposed_matrix",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "FMT-008"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE52778/batch_confounding",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "BIO-007"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE52778/library_size_imbalance",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-002"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE52778/low_replicates",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-004"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE52778/mixed_gene_ids",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "GEN-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE52778/normalized_not_raw",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE52778/sample_label_mismatch",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE52778/transposed_matrix",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "FMT-008"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE60450/batch_confounding",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "BIO-007"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE60450/library_size_imbalance",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-002"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE60450/low_replicates",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-004"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE60450/mixed_gene_ids",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "GEN-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE60450/normalized_not_raw",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE60450/sample_label_mismatch",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "GSE60450/transposed_matrix",
       "source": "real_faulty",
       "ok": true,
       "tp": [

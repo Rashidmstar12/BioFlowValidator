@@ -33,6 +33,11 @@ ROOT = Path(__file__).parent
 REAL_DIR = ROOT / "real"
 FAULTY_DIR = ROOT / "real_faulty"
 
+# Add backend to path so app.* imports work when run from the repo root
+_BACKEND = ROOT.parent / "backend"
+if str(_BACKEND) not in sys.path:
+    sys.path.insert(0, str(_BACKEND))
+
 # ---------------------------------------------------------------------------
 # Representative HGNC symbols used for F2 (mixed gene IDs)
 # These are well-known human gene symbols that the _classify_id function

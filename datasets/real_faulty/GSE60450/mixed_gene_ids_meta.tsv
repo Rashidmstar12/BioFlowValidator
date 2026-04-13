@@ -1,0 +1,13 @@
+sample_id	condition	batch
+MCL1.DG	basal	virgin
+MCL1.DH	basal	virgin
+MCL1.DI	basal	pregnant
+MCL1.DJ	basal	pregnant
+MCL1.DK	basal	lactating
+MCL1.DL	basal	lactating
+MCL1.LA	luminal	virgin
+MCL1.LB	luminal	virgin
+MCL1.LC	luminal	pregnant
+MCL1.LD	luminal	pregnant
+MCL1.LE	luminal	lactating
+MCL1.LF	luminal	lactating

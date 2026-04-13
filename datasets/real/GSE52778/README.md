@@ -85,6 +85,6 @@ and `batch` (cell line) columns, and writes `counts.tsv` + `metadata.tsv`.
 
 | File | Description |
 |---|---|
-| `counts.tsv` | Raw integer counts (genes × samples) — populated by fetch script |
-| `metadata.tsv` | Sample metadata — populated by fetch script |
-| `sha256sums.txt` | SHA-256 checksums — updated by fetch script |
+| `counts.tsv` | **Structural proxy v3** (GEO FTP blocked in CI; run fetch script for real data) |
+| `metadata.tsv` | **Structural proxy v3** (same) |
+| `sha256sums.txt` | SHA-256 checksums of proxy files |

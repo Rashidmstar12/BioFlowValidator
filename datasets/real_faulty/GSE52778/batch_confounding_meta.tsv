@@ -1,0 +1,9 @@
+sample_id	condition	batch
+GSM1275862_untreated	untreated	batch_A
+GSM1275862_dex	dex	batch_B
+GSM1275863_untreated	untreated	batch_A
+GSM1275863_dex	dex	batch_B
+GSM1275870_untreated	untreated	batch_A
+GSM1275870_dex	dex	batch_B
+GSM1275871_untreated	untreated	batch_A
+GSM1275871_dex	dex	batch_B

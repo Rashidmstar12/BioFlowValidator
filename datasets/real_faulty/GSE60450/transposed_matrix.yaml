@@ -1,0 +1,12 @@
+dataset: GSE60450
+fault_type: transposed_matrix
+description: "Count matrix transposed: now samples \xD7 genes instead of genes \xD7\
+  \ samples"
+expected_fails:
+- rule_id: FMT-008
+  severity: WARNING
+  min_affected_items: 1
+expected_passes: []
+expected_skips: []
+notes: FMT-008 must FAIL because n_rows < n_cols and n_rows < 500. Other rules may
+  also fire because sample names look like gene IDs.
