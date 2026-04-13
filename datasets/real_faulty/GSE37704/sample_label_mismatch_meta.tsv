@@ -1,0 +1,7 @@
+	condition	batch
+SRR493366_WRONG	control	batch1
+SRR493367_WRONG	control	batch2
+SRR493368	control	batch3
+SRR493369	HOXA1KD	batch1
+SRR493370	HOXA1KD	batch2
+SRR493371	HOXA1KD	batch3

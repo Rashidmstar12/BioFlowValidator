@@ -181,7 +181,12 @@ class NearIdenticalSampleRule(BaseRule):
     severity = "WARNING"
     description = "Detect near-identical sample profiles (possible technical replicate confusion)."
 
-    _CORR_THRESHOLD = 0.9999
+    # Samples with r ≥ 0.999 (log-count Pearson) are considered near-identical per
+    # Conesa et al. 2016, Genome Biology, "A survey of best practices for RNA-seq
+    # data analysis."  Raw-count Pearson is dominated by highly expressed genes and
+    # is therefore inappropriate; log1p transformation gives equal weight to genes
+    # across the dynamic range.
+    _CORR_THRESHOLD = 0.999
 
     def run(self, context: ValidationContext) -> RuleResult:
         if context.count_matrix is None:
@@ -190,7 +195,9 @@ class NearIdenticalSampleRule(BaseRule):
         if df.shape[1] < 2:
             return self._skip("Fewer than 2 samples; correlation check skipped.")
 
-        corr = df.corr()
+        # Use log1p-transformed counts for Pearson correlation (Conesa et al. 2016)
+        log_df = np.log1p(df)
+        corr = log_df.corr()
         issues = []
         cols = list(corr.columns)
         for i in range(len(cols)):
@@ -201,11 +208,13 @@ class NearIdenticalSampleRule(BaseRule):
 
         if issues:
             return self._fail(
-                f"{len(issues)} pair(s) of samples are near-identical (r ≥ {self._CORR_THRESHOLD}).",
+                f"{len(issues)} pair(s) of samples are near-identical "
+                f"(log1p-Pearson r ≥ {self._CORR_THRESHOLD}).",
                 affected_items=issues[:10],
                 suggestion=(
                     "Verify that these are truly independent biological replicates, "
-                    "not duplicated technical replicates."
+                    "not duplicated technical replicates. "
+                    "Threshold: r ≥ 0.999 per Conesa et al. 2016 (Genome Biology)."
                 ),
             )
         return self._pass("No near-identical sample pairs detected.")

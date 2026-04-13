@@ -10,6 +10,7 @@ from app.rules.format.rules import (
     NonNumericRule,
     NegativeCountRule,
     WhitespaceNameRule,
+    MatrixOrientationRule,
 )
 from app.rules.sample.rules import (
     SampleMatchRule,
@@ -23,6 +24,7 @@ from app.rules.gene.rules import (
     DuplicateGeneRule,
     VersionSuffixRule,
     NonBiologicalIDRule,
+    OrganismDetectionRule,
 )
 from app.rules.normalization.rules import (
     NonIntegerCountRule,
@@ -39,14 +41,19 @@ from app.rules.biology.rules import (
     HighCountGeneRule,
     MitochondrialFractionRule,
     HousekeepingGeneRule,
+    BatchConfoundingRule,
+    ERCCSpikeInRule,
 )
 
 # Rules are executed in this order.
 # Format rules run first (gate for downstream checks).
+# GEN-005 (OrganismDetectionRule) runs early in the gene block so that downstream
+# biology rules (BIO-005, BIO-006) can read context.flags["organism"].
 RULE_CLASSES: list[type[BaseRule]] = [
     # Format
     EncodingRule,
     DelimiterRule,
+    MatrixOrientationRule,   # FMT-008: check orientation before parsing content
     HeaderRule,
     DuplicateColumnRule,
     NonNumericRule,
@@ -59,6 +66,7 @@ RULE_CLASSES: list[type[BaseRule]] = [
     ReplicateCountRule,
     NearIdenticalSampleRule,
     # Gene
+    OrganismDetectionRule,   # GEN-005: sets context.flags["organism"] for BIO-005/006
     GeneIDFormatRule,
     DuplicateGeneRule,
     VersionSuffixRule,
@@ -77,6 +85,8 @@ RULE_CLASSES: list[type[BaseRule]] = [
     HighCountGeneRule,
     MitochondrialFractionRule,
     HousekeepingGeneRule,
+    BatchConfoundingRule,    # BIO-007
+    ERCCSpikeInRule,         # BIO-008
 ]
 
 

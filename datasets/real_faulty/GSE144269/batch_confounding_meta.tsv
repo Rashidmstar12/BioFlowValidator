@@ -1,0 +1,7 @@
+sample_id	condition	batch
+GSM4280001	tumor	batch_A
+GSM4280002	tumor	batch_B
+GSM4280003	tumor	batch_A
+GSM4280004	tumor	batch_B
+GSM4280005	tumor	batch_A
+GSM4280006	tumor	batch_B

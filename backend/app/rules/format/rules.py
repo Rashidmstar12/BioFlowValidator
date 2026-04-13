@@ -65,10 +65,25 @@ class HeaderRule(BaseRule):
                 "Count matrix has no columns. Header row may be missing.",
                 suggestion="Ensure the first row contains sample IDs.",
             )
-        # Heuristic: if all column names look like integers, the header is probably missing
-        if all(str(c).isdigit() for c in df.columns):
+        # Heuristic: if columns are sequential integers starting from 0 or 1, the header is
+        # likely missing (those are pandas default integer column names). Non-sequential
+        # numeric columns (e.g. Entrez IDs) are valid identifiers and must NOT trigger this
+        # rule — that would be a false positive on any matrix using Entrez gene IDs as
+        # row/column headers.
+        try:
+            int_cols = [int(c) for c in df.columns]
+            first = int_cols[0]
+            is_sequential = (
+                first in (0, 1)
+                and int_cols == list(range(first, first + len(int_cols)))
+            )
+        except (ValueError, TypeError):
+            is_sequential = False
+
+        if is_sequential:
             return self._fail(
-                "All column names are numeric integers, which suggests the header row is missing.",
+                "Column names are sequential integers (0, 1, 2, … or 1, 2, 3, …), "
+                "which are pandas default column indices and indicate the header row is missing.",
                 affected_items=[str(c) for c in df.columns[:5]],
                 suggestion="Add a header row with sample IDs as the first row.",
             )
@@ -188,3 +203,51 @@ class WhitespaceNameRule(BaseRule):
                 suggestion="Strip whitespace and replace special characters with underscores.",
             )
         return self._pass("No whitespace or special character issues in names.")
+
+
+class MatrixOrientationRule(BaseRule):
+    """FMT-008 — Detect likely transposed count matrices (samples × genes instead of genes × samples).
+
+    Biological importance: A transposed matrix causes every downstream rule to analyse
+    sample names as gene IDs and gene IDs as sample names.  Every rule that fires
+    downstream will be a false positive.  This is a catastrophic failure mode that
+    makes the tool completely unreliable without this check.
+
+    Heuristic: A typical bulk RNA-seq count matrix has 15,000–25,000 gene rows and
+    4–100 sample columns.  If n_columns > n_rows AND n_rows < 500, the matrix is
+    almost certainly transposed.  Even targeted gene panels have ≥ 200 genes.
+    """
+
+    rule_id = "FMT-008"
+    category = "format"
+    severity = "WARNING"
+    description = (
+        "Count matrix orientation should be genes × samples (rows = genes, columns = samples). "
+        "If n_columns > n_rows and n_rows < 500, the matrix appears to be transposed."
+    )
+
+    _MAX_GENE_ROWS_FOR_TRANSPOSED = 500
+
+    def run(self, context: ValidationContext) -> RuleResult:
+        if context.count_matrix is None:
+            return self._skip("Count matrix could not be parsed.")
+        df = context.count_matrix
+        n_rows, n_cols = df.shape
+        if n_cols > n_rows and n_rows < self._MAX_GENE_ROWS_FOR_TRANSPOSED:
+            return self._fail(
+                f"Count matrix has {n_rows} rows and {n_cols} columns. "
+                "Expected orientation is genes × samples (rows = genes). "
+                "The matrix appears to be transposed (samples × genes).",
+                affected_items=[
+                    f"n_rows={n_rows} (expected ~15,000–25,000 for bulk RNA-seq)",
+                    f"n_cols={n_cols} (expected ~4–100)",
+                ],
+                suggestion=(
+                    "Transpose the matrix so that rows correspond to genes and columns "
+                    "correspond to samples. In Python: df.T"
+                ),
+                details={"n_rows": n_rows, "n_cols": n_cols},
+            )
+        return self._pass(
+            f"Matrix orientation appears correct: {n_rows} rows (genes) × {n_cols} columns (samples)."
+        )

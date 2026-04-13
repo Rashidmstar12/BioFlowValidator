@@ -1,0 +1,12 @@
+dataset: airway
+fault_type: library_size_imbalance
+description: "Sample 'N61311_untreated' counts multiplied by 50\xD7 (original: 415,031,\
+  \ new: 20,751,550)"
+expected_fails:
+- rule_id: NRM-002
+  severity: WARNING
+  min_affected_items: 1
+expected_passes: []
+expected_skips: []
+notes: "NRM-002 must FAIL because max/min library size ratio will exceed 10\xD7. The\
+  \ inflated sample is 'N61311_untreated'."

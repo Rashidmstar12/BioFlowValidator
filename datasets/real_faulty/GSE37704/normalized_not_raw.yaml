@@ -1,0 +1,11 @@
+dataset: GSE37704
+fault_type: normalized_not_raw
+description: All count matrix values converted to CPM (floating-point, non-integer)
+expected_fails:
+- rule_id: NRM-001
+  severity: ERROR
+  min_affected_items: 0
+expected_passes: []
+expected_skips: []
+notes: NRM-001 must FAIL/ERROR because > 1% of values are non-integer. CPM values
+  are floating-point; the fraction non-integer will be ~1.0.

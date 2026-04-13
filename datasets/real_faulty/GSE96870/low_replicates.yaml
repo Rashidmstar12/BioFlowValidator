@@ -1,0 +1,10 @@
+dataset: GSE96870
+fault_type: low_replicates
+description: Dropped 3 sample(s) from condition '0h', leaving only 1 replicate
+expected_fails:
+- rule_id: SMP-004
+  severity: ERROR
+  min_affected_items: 1
+expected_passes: []
+expected_skips: []
+notes: SMP-004 must FAIL/ERROR because condition '0h' has only 1 replicate (< 2 required).

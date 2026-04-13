@@ -12,7 +12,18 @@ from app.rules.base import BaseRule
 _ENSEMBL_RE = re.compile(r'^ENSG\d{11}(\.\d+)?$', re.IGNORECASE)
 _ENSEMBL_BASE_RE = re.compile(r'^ENSG\d{11}$', re.IGNORECASE)
 _ENSEMBL_VERSION_RE = re.compile(r'^ENSG\d{11}\.\d+$', re.IGNORECASE)
+# Multi-species Ensembl ID: ENSG (human), ENSMUSG (mouse), ENSRNOG (rat), ENSDARG (zebrafish), etc.
+_ENSEMBL_ANY_RE = re.compile(r'^ENS[A-Z]*G\d', re.IGNORECASE)
 _ENTREZ_RE = re.compile(r'^\d+$')
+
+# Ensembl species prefixes used by GEN-005
+_SPECIES_PREFIXES: dict[str, tuple[str, re.Pattern]] = {
+    "ENSG":     ("human",     re.compile(r'^ENSG\d',     re.IGNORECASE)),
+    "ENSMUSG":  ("mouse",     re.compile(r'^ENSMUSG\d',  re.IGNORECASE)),
+    "ENSRNOG":  ("rat",       re.compile(r'^ENSRNOG\d',  re.IGNORECASE)),
+    "ENSDARG":  ("zebrafish", re.compile(r'^ENSDARG\d',  re.IGNORECASE)),
+    "ENSGALG":  ("chicken",   re.compile(r'^ENSGALG\d',  re.IGNORECASE)),
+}
 _SYMBOL_RE = re.compile(r'^[A-Z][A-Z0-9\-]{1,}$')
 
 
@@ -22,6 +33,9 @@ def _classify_id(gene_id: str) -> str:
         return "ensembl"
     if _ENSEMBL_VERSION_RE.match(g):
         return "ensembl_versioned"
+    # Multi-species Ensembl IDs (ENSMUSG, ENSRNOG, ENSDARG, etc.)
+    if _ENSEMBL_ANY_RE.match(g):
+        return "ensembl"
     if _ENTREZ_RE.match(g):
         return "entrez"
     if _SYMBOL_RE.match(g):
@@ -146,3 +160,97 @@ class NonBiologicalIDRule(BaseRule):
                 ),
             )
         return self._pass("Gene IDs appear biologically meaningful.")
+
+
+class OrganismDetectionRule(BaseRule):
+    """GEN-005 — Detect organism from Ensembl gene ID prefixes and store in context flags.
+
+    Biological importance: Several downstream rules (BIO-005 MT thresholds, BIO-006
+    housekeeping gene sets) require knowledge of the organism.  Without explicit
+    detection, those rules must either use wrong thresholds or SKIP entirely.
+    Additionally, mixed-organism gene IDs (e.g. mouse IDs in a human experiment)
+    indicate a critical data error that no other rule would catch.
+
+    The Ensembl species prefix is a stable, published identifier — it is unambiguous
+    and does not require any network access or external database lookup.
+    """
+
+    rule_id = "GEN-005"
+    category = "gene"
+    severity = "INFO"
+    description = (
+        "Detect organism from Ensembl gene ID prefixes and store in validation context. "
+        "Supports human (ENSG), mouse (ENSMUSG), rat (ENSRNOG), zebrafish (ENSDARG), "
+        "and chicken (ENSGALG). Mixed-organism IDs are flagged as ERROR."
+    )
+
+    # Fraction of IDs that must match a single species to call it confidently
+    _DOMINANT_THRESHOLD = 0.80
+    # Minimum fraction for a species to be considered "present" (cross-contamination check)
+    _MINOR_THRESHOLD = 0.10
+
+    def run(self, context: ValidationContext) -> RuleResult:
+        if context.count_matrix is None:
+            return self._skip("Count matrix not available.")
+
+        gene_ids = [str(g) for g in context.count_matrix.index]
+        n = len(gene_ids)
+        if n == 0:
+            return self._skip("Count matrix has no rows.")
+
+        # Count how many IDs match each species prefix
+        species_counts: dict[str, int] = {}
+        for label, (species_name, pattern) in _SPECIES_PREFIXES.items():
+            cnt = sum(1 for g in gene_ids if pattern.match(g))
+            if cnt > 0:
+                species_counts[species_name] = cnt
+
+        if not species_counts:
+            return self._skip(
+                "No Ensembl species prefix recognised; organism detection skipped. "
+                "Gene IDs may be Entrez IDs or gene symbols."
+            )
+
+        total_ensembl = sum(species_counts.values())
+        fracs = {sp: cnt / n for sp, cnt in species_counts.items()}
+
+        # Check for mixed-organism IDs (two species each > 10%)
+        present_species = [sp for sp, frac in fracs.items() if frac > self._MINOR_THRESHOLD]
+        if len(present_species) > 1:
+            detail_str = ", ".join(
+                f"{sp}: {fracs[sp]*100:.1f}%" for sp in sorted(present_species)
+            )
+            return self._fail(
+                f"Mixed-organism Ensembl gene IDs detected: {detail_str}. "
+                "Gene IDs from multiple species in a single matrix indicate a data error.",
+                affected_items=[f"{sp}: {species_counts[sp]} IDs" for sp in sorted(present_species)],
+                suggestion=(
+                    "Ensure all gene IDs belong to a single organism. Remove or separate "
+                    "gene rows from different species."
+                ),
+                details={"species_fractions": fracs},
+            )
+
+        # Single dominant organism
+        dominant_species, dominant_frac = max(fracs.items(), key=lambda x: x[1])
+        if dominant_frac >= self._DOMINANT_THRESHOLD:
+            context.flags["organism"] = dominant_species
+            return RuleResult(
+                rule_id=self.rule_id,
+                category=self.category,
+                severity=self.severity,
+                status="PASS",
+                message=(
+                    f"Organism detected: {dominant_species!r} "
+                    f"({dominant_frac*100:.1f}% of gene IDs match Ensembl prefix)."
+                ),
+                details={"organism": dominant_species, "species_fractions": fracs},
+            )
+
+        # Some Ensembl IDs but below confidence threshold
+        context.flags["organism"] = dominant_species
+        return self._skip(
+            f"Organism detection inconclusive: best match is {dominant_species!r} "
+            f"({dominant_frac*100:.1f}% < {self._DOMINANT_THRESHOLD*100:.0f}% threshold). "
+            "Using best guess for downstream rules."
+        )
