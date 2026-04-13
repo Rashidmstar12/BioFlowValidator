@@ -1,0 +1,5 @@
+# Ground truth for sample_mismatch_counts.tsv + sample_mismatch_meta.tsv
+expected_fails:
+  - rule_id: SMP-001
+    severity: ERROR
+    reason: "2 samples in matrix (ctrl_3, treat_3) not present in metadata"
