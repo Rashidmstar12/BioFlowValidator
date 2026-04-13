@@ -11,16 +11,50 @@
 # Outputs:
 #   datasets/benchmark_results.json
 #   datasets/benchmark_results.md
+#   datasets/benchmark_results_<timestamp>.json  (timestamped copy)
 #   datasets/fault_severity_results.json
 #   datasets/fault_severity_results.md
 
 set -euo pipefail
 export PYTHONPATH="${PYTHONPATH:-backend}"
 
+# ── Interpreter check ─────────────────────────────────────────────────────
+PY3=$(command -v python3 2>/dev/null || true)
+if [ -z "$PY3" ]; then
+    echo "ERROR: python3 not found in PATH. Install Python 3 and retry."
+    exit 1
+fi
+
 echo "================================================================"
 echo "  BioFlowValidator — True-Public-Data Benchmark"
 echo "  $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "  Python: $($PY3 --version 2>&1)"
 echo "================================================================"
+echo ""
+
+# ── scipy preflight check ─────────────────────────────────────────────────
+echo "── Preflight: scipy version ─────────────────────────────────────────"
+$PY3 - <<'SCIPY_CHECK'
+import sys
+try:
+    import scipy
+    from packaging.version import Version
+    if Version(scipy.__version__) < Version("1.11"):
+        print(f"  ERROR: scipy {scipy.__version__} found; >= 1.11 required for BIO-007.")
+        sys.exit(1)
+    print(f"  ✅  scipy {scipy.__version__}")
+except ImportError:
+    print("  ERROR: scipy not installed. Run: pip install scipy>=1.11")
+    sys.exit(1)
+except ImportError:
+    # packaging not available — do a crude string comparison
+    parts = scipy.__version__.split(".")
+    major, minor = int(parts[0]), int(parts[1])
+    if (major, minor) < (1, 11):
+        print(f"  ERROR: scipy {scipy.__version__} found; >= 1.11 required for BIO-007.")
+        sys.exit(1)
+    print(f"  ✅  scipy {scipy.__version__} (version check via string split)")
+SCIPY_CHECK
 echo ""
 
 # ── 0. Verify all 3 datasets are marked true_public_data ──────────────────
@@ -37,8 +71,8 @@ for ds in GSE52778 GSE60450 GSE107011; do
             echo "  ✅  $ds: $mode"
         else
             echo "  ⚠️   $ds: $mode  (expected true_public_data)"
-            echo "        Run: python datasets/fetch_real_data.py --dataset $ds"
-            echo "        OR:  python datasets/ingest_real_data.py --dataset $ds --counts <file>"
+            echo "        Run: python3 datasets/fetch_real_data.py --dataset $ds"
+            echo "        OR:  python3 datasets/ingest_real_data.py --dataset $ds --counts <file>"
             all_ok=false
         fi
     fi
@@ -52,22 +86,32 @@ if [ "$all_ok" = false ]; then
 fi
 echo ""
 
+# ── Stale faulty-variants warning ────────────────────────────────────────
+if [ -d "datasets/real_faulty" ] && [ -n "$(ls -A datasets/real_faulty 2>/dev/null)" ]; then
+    echo "── Warning: stale real_faulty files ────────────────────────────────"
+    echo "  datasets/real_faulty/ already contains files from a previous run."
+    echo "  Step 2 will overwrite the 3 target-dataset subdirectories, but"
+    echo "  other subdirectories will remain and be included in the benchmark."
+    echo "  If you want a clean slate: rm -rf datasets/real_faulty"
+    echo ""
+fi
+
 # ── 1. Validate clean datasets ────────────────────────────────────────────
 echo "── Step 1: Clean dataset validation ────────────────────────────────"
-python datasets/validate_clean_datasets.py 2>&1 | tee /tmp/bfv_clean_validation.log
+python3 datasets/validate_clean_datasets.py 2>&1 | tee /tmp/bfv_clean_validation.log
 echo ""
 
 # ── 2. Regenerate faulty variants for the 3 datasets ──────────────────────
 echo "── Step 2: Generate faulty variants ────────────────────────────────"
 for ds in GSE52778 GSE60450 GSE107011; do
     echo "  Generating faults for $ds …"
-    python datasets/generate_real_faults.py --dataset "$ds"
+    python3 datasets/generate_real_faults.py --dataset "$ds"
 done
 echo ""
 
 # ── 3. Run full benchmark ─────────────────────────────────────────────────
 echo "── Step 3: Run full benchmark ──────────────────────────────────────"
-python datasets/benchmark_eval.py \
+python3 datasets/benchmark_eval.py \
     --json-out datasets/benchmark_results.json \
     --md-out datasets/benchmark_results.md \
     --strict
@@ -75,7 +119,7 @@ echo ""
 
 # ── 4. Run fault severity analysis ───────────────────────────────────────
 echo "── Step 4: Fault severity analysis ─────────────────────────────────"
-python datasets/fault_severity_analysis.py
+python3 datasets/fault_severity_analysis.py
 echo ""
 
 # ── 5. Print summary ─────────────────────────────────────────────────────
@@ -104,10 +148,19 @@ for ft, m in sorted(d.get("fault_type_metrics", {}).items()):
     print(f"    {status} {ft}: recall={m['recall']:.3f}  (TP={m['tp']} FN={m['fn']})")
 PYEOF
 
+# ── Save timestamped copy of results ────────────────────────────────────
+TIMESTAMP=$(date -u +%Y-%m-%dT%H%M%SZ)
+if [ -f "datasets/benchmark_results.json" ]; then
+    cp "datasets/benchmark_results.json" "datasets/benchmark_results_${TIMESTAMP}.json"
+    echo ""
+    echo "  Timestamped copy: datasets/benchmark_results_${TIMESTAMP}.json"
+fi
+
 echo ""
 echo "================================================================"
 echo "  Outputs written:"
 echo "    datasets/benchmark_results.json"
+echo "    datasets/benchmark_results_${TIMESTAMP}.json  (timestamped copy)"
 echo "    datasets/benchmark_results.md"
 echo "    datasets/fault_severity_results.json"
 echo "    datasets/fault_severity_results.md"
@@ -119,3 +172,4 @@ echo "    3. Fill in datasets/external_benchmark_GSE107011.md"
 echo "    4. Update datasets/benchmark_manifest.yaml checksums and source_type"
 echo "    5. Review the publication-readiness checklist in TRUE_PUBLIC_DATA_RUNBOOK.md"
 echo "================================================================"
+

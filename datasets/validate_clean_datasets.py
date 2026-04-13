@@ -50,8 +50,11 @@ EXPECTED_FAILS: dict[str, list[str]] = {
     #            > 50% fraction is physiological, not an artifact.
     #   BIO-005: Granulocytes (neutrophils, basophils) have elevated MT fraction;
     #            > 30% MT is physiological for these cell types, not a QC failure.
-    # Uncomment if/when GSE107011 real data is downloaded:
-    # "GSE107011": ["BIO-004", "BIO-005"],
+    #   NRM-002: Extreme library-size variation across radically different immune cell
+    #            types (erythroblasts vs. T cells) can exceed the 10× ratio threshold.
+    #            Add "NRM-002" to this list only after confirming it fires on real data;
+    #            it is intentionally omitted here until that first smoke test is done.
+    "GSE107011": ["BIO-004", "BIO-005"],
 }
 
 # ---------------------------------------------------------------------------

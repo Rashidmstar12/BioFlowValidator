@@ -193,8 +193,13 @@ def check_clean_datasets() -> tuple[int, list[str]]:
     dataset_modes: dict[str, str] = {}
 
     # Special case: GSE144269 is intentionally single-condition (BIO-001 expected)
+    # GSE107011: BIO-004 (haemoglobin dominance in erythroblasts) and BIO-005
+    # (elevated MT in granulocytes/neutrophils) are expected physiological signals,
+    # not validator false positives. Must stay in sync with EXPECTED_FAILS in
+    # validate_clean_datasets.py.
     intentional_fails = {
         "GSE144269": {"BIO-001"},
+        "GSE107011": {"BIO-004", "BIO-005"},
     }
 
     for ds_dir in sorted(REAL_DIR.iterdir()):

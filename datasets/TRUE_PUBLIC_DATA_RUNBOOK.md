@@ -174,8 +174,10 @@ python datasets/fetch_real_data.py --dataset GSE60450
 gunzip -k /path/to/GSE60450_Lactation-GenewiseCounts.txt.gz
 # → GSE60450_Lactation-GenewiseCounts.txt
 
-# 2. Inspect: first column is gene ID, second column is "Length" (annotation) — skip it
-# The ingest script handles column standardization automatically for TSV files.
+# 2. Note on "Length" column:
+# The raw GEO file has a second column named "Length" (gene annotation lengths).
+# ingest_real_data.py detects and drops it automatically and prints a log message.
+# You do NOT need to strip it manually before running the ingest command.
 
 # 3. Prepare a metadata CSV with these columns:
 #    sample_id, condition, batch
@@ -198,7 +200,7 @@ gunzip -k /path/to/GSE60450_Lactation-GenewiseCounts.txt.gz
 #    MCL1.LF → luminal / lactating
 
 # 4. Ingest (after creating metadata.csv)
-python datasets/ingest_real_data.py \
+python3 datasets/ingest_real_data.py \
     --dataset GSE60450 \
     --counts /path/to/GSE60450_Lactation-GenewiseCounts.txt \
     --metadata /path/to/GSE60450_metadata.csv \
@@ -309,17 +311,31 @@ gunzip -k /path/to/GSE107011_Processed_data_RCPCmel.txt.gz
 # 2. Verify it contains integers (not floats):
 head -2 /path/to/GSE107011_Processed_data_RCPCmel.txt | cut -f1-4
 
-# 3. Ingest (metadata is auto-inferred from column names: <CellType>_<DonorN>)
-python datasets/ingest_real_data.py \
+# 3. Prepare a metadata CSV (required — metadata is NOT auto-derived from column names).
+#    Column names in the RCPCmel file have the format CD4Tcm_Donor1, CD4Tcm_Donor2,
+#    etc. but ingest_real_data.py does NOT parse these to produce condition/batch.
+#    You must supply a --metadata CSV explicitly if you want BIO-007, SMP-004, and
+#    BIO-001 to run (they SKIP without metadata).
+#
+#    Minimal metadata CSV format:
+#      sample_id,condition,batch
+#      CD4Tcm_Donor1,CD4Tcm,Donor1
+#      CD4Tcm_Donor2,CD4Tcm,Donor2
+#      ...
+#    Derive the full table from the 29 column headers in the RCPCmel file.
+
+# 4. Ingest
+python3 datasets/ingest_real_data.py \
     --dataset GSE107011 \
     --counts /path/to/GSE107011_Processed_data_RCPCmel.txt \
+    --metadata /path/to/GSE107011_metadata.csv \
     --notes "Downloaded RCPCmel (raw counts) from GEO FTP $(date +%Y-%m-%d); NOT the TPM file"
 ```
 
-Note: column names in the RCPCmel file have the format `CD4Tcm_Donor1`,
-`CD4Tcm_Donor2`, etc. The `ingest_real_data.py` metadata standardiser will
-attempt to split on `_Donor` to produce `condition=CD4Tcm` and `batch=Donor1`.
-If splitting fails, add a `--metadata` CSV manually (see GSE60450 example above).
+> **Important — metadata is mandatory for full coverage**: without `--metadata`, rules
+> BIO-007 (batch confounding), SMP-004 (condition replication), and BIO-001 (single
+> condition) will all SKIP. The `ingest_real_data.py` script does **not** attempt to
+> split column names on `_Donor` or any other pattern to synthesise metadata.
 
 ### Expected ingestion outputs
 

@@ -85,7 +85,13 @@ def _write_checksums(out_dir: Path) -> dict[str, str]:
 
 
 def _read_counts(path: Path) -> pd.DataFrame:
-    """Read a count matrix from TSV, CSV, or whitespace-delimited file."""
+    """Read a count matrix from TSV, CSV, or whitespace-delimited file.
+
+    Special handling: if the first non-index column is named exactly ``Length``
+    (case-sensitive), it is treated as a gene-annotation column and dropped.
+    This matches the layout of GSE60450_Lactation-GenewiseCounts.txt, where GEO
+    places a gene-length annotation as the second column before the sample counts.
+    """
     suffix = path.suffix.lower()
     sep: str
     if suffix in {".tsv", ".txt"}:
@@ -98,6 +104,15 @@ def _read_counts(path: Path) -> pd.DataFrame:
         sep = "\t" if "\t" in first_line else ","
 
     df = pd.read_csv(path, sep=sep, index_col=0)
+
+    # Drop gene-annotation column "Length" if present (e.g. GSE60450 raw GEO file).
+    if "Length" in df.columns:
+        print(
+            "  ℹ  Dropping 'Length' annotation column "
+            f"(found in {path.name}; not a sample column)."
+        )
+        df = df.drop(columns=["Length"])
+
     return df
 
 
