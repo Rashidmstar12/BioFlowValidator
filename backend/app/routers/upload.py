@@ -42,6 +42,10 @@ async def upload_files(
     job_dir = _UPLOAD_DIR / job_id
     job_dir.mkdir(parents=True, exist_ok=True)
 
+    # Register the trusted path immediately — validate router will look it up
+    from app import store as _store
+    _store.register_job_dir(job_id, job_dir)
+
     count_data = await count_matrix.read()
     if len(count_data) > _MAX_SIZE:
         raise HTTPException(status_code=413, detail="Count matrix file exceeds 50 MB limit.")
