@@ -1,0 +1,5 @@
+# Ground truth for normalized_not_raw.tsv
+expected_fails:
+  - rule_id: NRM-001
+    severity: ERROR
+    reason: "All values are floats in TPM range (0.1-500), not raw integer counts"

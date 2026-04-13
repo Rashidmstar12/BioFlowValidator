@@ -1,0 +1,12 @@
+dataset: GSE60450
+fault_type: library_size_imbalance
+description: "Sample 'MCL1.DG' counts multiplied by 50\xD7 (original: 4,979,468, new:\
+  \ 248,973,400)"
+expected_fails:
+- rule_id: NRM-002
+  severity: WARNING
+  min_affected_items: 1
+expected_passes: []
+expected_skips: []
+notes: "NRM-002 must FAIL because max/min library size ratio will exceed 10\xD7. The\
+  \ inflated sample is 'MCL1.DG'."

@@ -1,0 +1,12 @@
+dataset: airway
+fault_type: sample_label_mismatch
+description: '2 sample IDs in metadata renamed with _WRONG suffix: [''N61311_untreated'',
+  ''N61311_dex'']'
+expected_fails:
+- rule_id: SMP-001
+  severity: ERROR
+  min_affected_items: 2
+expected_passes: []
+expected_skips: []
+notes: SMP-001 must FAIL because 2 metadata samples are not in the count matrix and
+  2 count matrix samples are not in the metadata.

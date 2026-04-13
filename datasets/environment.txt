@@ -1,0 +1,56 @@
+# BioFlowValidator — External Benchmark Environment Specification
+#
+# This file documents the Python version and package versions used to
+# produce the reference benchmark results in datasets/benchmark_results.json.
+#
+# To reproduce the benchmark outside CI:
+#
+#   1. Create a virtual environment:
+#      python3 -m venv venv
+#      source venv/bin/activate   # or venv\Scripts\activate on Windows
+#
+#   2. Install dependencies:
+#      pip install -r datasets/environment.txt
+#
+#   3. Run the benchmark:
+#      PYTHONPATH=backend python datasets/benchmark_eval.py --strict
+#
+#   4. Run severity analysis:
+#      PYTHONPATH=backend python datasets/fault_severity_analysis.py
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Python version: 3.12 (≥3.10 required)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# IMPORTANT: scipy>=1.11 is REQUIRED.
+# Without scipy, BIO-007 (BatchConfoundingRule) silently SKIPs and
+# batch_confounding recall drops to 0.000.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Core dependencies (production)
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+pandas>=2.2.0
+numpy>=1.26.0
+scipy>=1.11.0
+jinja2>=3.1.4
+openpyxl>=3.1.2
+chardet>=5.2.0
+pyyaml>=6.0.0
+
+# Benchmark / testing dependencies
+httpx>=0.27.0
+pytest>=8.2.0
+pytest-asyncio>=0.23.6
+
+# Reference versions used for the published benchmark (2026-04-13):
+#   pandas==2.2.2
+#   numpy==1.26.4
+#   scipy==1.17.1
+#   fastapi==0.111.0
+#   httpx==0.27.0
+#   pytest==8.2.0
+#   pyyaml==6.0.1
+#   chardet==5.2.0

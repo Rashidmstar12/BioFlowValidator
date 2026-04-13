@@ -1,0 +1,14 @@
+dataset: GSE144269
+fault_type: batch_confounding
+description: "Dataset 'GSE144269' has only one condition; batch-condition confounding\
+  \ cannot be computed (Cram\xE9r's V requires \u22652 categories). BIO-007 will SKIP\
+  \ or PASS. BIO-001 remains the primary expected fail."
+expected_fails:
+- rule_id: BIO-001
+  severity: ERROR
+  min_affected_items: 0
+expected_passes: []
+expected_skips: []
+notes: "Dataset 'GSE144269' has only one condition; batch-condition confounding cannot\
+  \ be computed (Cram\xE9r's V requires \u22652 categories). BIO-007 will SKIP or\
+  \ PASS. BIO-001 remains the primary expected fail."

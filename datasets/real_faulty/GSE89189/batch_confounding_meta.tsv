@@ -1,0 +1,7 @@
+sample_id	condition	batch
+GSM2360001	unstimulated	batch_A
+GSM2360002	unstimulated	batch_A
+GSM2360003	unstimulated	batch_A
+GSM2360004	LPS	batch_B
+GSM2360005	LPS	batch_B
+GSM2360006	LPS	batch_B

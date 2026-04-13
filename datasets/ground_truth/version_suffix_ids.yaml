@@ -1,0 +1,5 @@
+# Ground truth for version_suffix_ids.tsv
+expected_fails:
+  - rule_id: GEN-003
+    severity: WARNING
+    reason: "All Ensembl IDs have version suffixes (e.g. ENSG00000000001.7)"

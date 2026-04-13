@@ -1,0 +1,5 @@
+# Ground truth for too_few_replicates_counts.tsv + too_few_replicates_meta.tsv
+expected_fails:
+  - rule_id: SMP-004
+    severity: ERROR
+    reason: "Only 1 replicate per condition (control, treated)"

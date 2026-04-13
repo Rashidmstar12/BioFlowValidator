@@ -1,0 +1,7 @@
+sample_id	condition	batch
+SRR493366	control	batch_A
+SRR493367	control	batch_A
+SRR493368	control	batch_A
+SRR493369	HOXA1KD	batch_B
+SRR493370	HOXA1KD	batch_B
+SRR493371	HOXA1KD	batch_B

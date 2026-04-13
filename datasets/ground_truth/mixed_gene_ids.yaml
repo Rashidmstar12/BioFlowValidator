@@ -1,0 +1,7 @@
+# Ground truth for mixed_gene_ids.tsv
+# Expected: GEN-001 should FAIL (mixed namespaces)
+expected_fails:
+  - rule_id: GEN-001
+    severity: ERROR
+    reason: "First 10 rows are HGNC symbols; remaining are Ensembl IDs"
+notes: "Only count matrix submitted; metadata checks will be skipped"

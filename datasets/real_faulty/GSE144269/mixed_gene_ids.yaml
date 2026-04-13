@@ -1,0 +1,14 @@
+dataset: GSE144269
+fault_type: mixed_gene_ids
+description: 50 non-housekeeping gene IDs replaced with HGNC gene symbols
+expected_fails:
+- rule_id: GEN-001
+  severity: ERROR
+  min_affected_items: 1
+- rule_id: BIO-001
+  severity: ERROR
+  min_affected_items: 0
+expected_passes: []
+expected_skips: []
+notes: GEN-001 must FAIL because HGNC symbols and Ensembl IDs are mixed. Housekeeping
+  gene rows are preserved so BIO-006 does not fire as a cascade.

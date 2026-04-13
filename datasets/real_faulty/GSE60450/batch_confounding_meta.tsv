@@ -1,0 +1,13 @@
+sample_id	condition	batch
+MCL1.DG	basal	batch_A
+MCL1.DH	basal	batch_A
+MCL1.DI	basal	batch_A
+MCL1.DJ	basal	batch_A
+MCL1.DK	basal	batch_A
+MCL1.DL	basal	batch_A
+MCL1.LA	luminal	batch_B
+MCL1.LB	luminal	batch_B
+MCL1.LC	luminal	batch_B
+MCL1.LD	luminal	batch_B
+MCL1.LE	luminal	batch_B
+MCL1.LF	luminal	batch_B

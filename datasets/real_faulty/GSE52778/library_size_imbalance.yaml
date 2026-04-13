@@ -1,0 +1,12 @@
+dataset: GSE52778
+fault_type: library_size_imbalance
+description: "Sample 'GSM1275862_untreated' counts multiplied by 50\xD7 (original:\
+  \ 5,545,034, new: 277,251,700)"
+expected_fails:
+- rule_id: NRM-002
+  severity: WARNING
+  min_affected_items: 1
+expected_passes: []
+expected_skips: []
+notes: "NRM-002 must FAIL because max/min library size ratio will exceed 10\xD7. The\
+  \ inflated sample is 'GSM1275862_untreated'."
