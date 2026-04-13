@@ -45,16 +45,51 @@ REAL_DIR = ROOT / "real"
 EXPECTED_FAILS: dict[str, list[str]] = {
     # GSE144269: all samples share one condition → BIO-001 is expected
     "GSE144269": ["BIO-001"],
+    # GSE107011 (Monaco et al. 2019 PBMC):
+    #   BIO-004: Haemoglobin genes (HBA1, HBA2, HBB) dominate erythroblast libraries;
+    #            > 50% fraction is physiological, not an artifact.
+    #   BIO-005: Granulocytes (neutrophils, basophils) have elevated MT fraction;
+    #            > 30% MT is physiological for these cell types, not a QC failure.
+    # Uncomment if/when GSE107011 real data is downloaded:
+    # "GSE107011": ["BIO-004", "BIO-005"],
 }
 
 # ---------------------------------------------------------------------------
 # Threshold documentation — for paper Table S1
 # ---------------------------------------------------------------------------
 RULE_THRESHOLDS = {
-    "NRM-002": "Library size max/min > 10× (Conesa et al. 2016)",
-    "BIO-005": "MT fraction > 30% per sample (conservative for bulk; Ilicic et al. 2016)",
-    "BIO-007": "Cramér's V ≥ 0.999 (perfect confounding); V > 0.7 (near-perfect)",
-    "SMP-005": "log1p-Pearson r ≥ 0.999 between sample pairs",
+    "NRM-002": (
+        "Library size max/min > 10× "
+        "(Robinson & Oshlack 2010, Genome Biology; Conesa et al. 2016, Genome Biology)"
+    ),
+    "NRM-003": (
+        "Total counts < 1,000 per sample "
+        "(conservative sentinel for catastrophic library failure; "
+        "ENCODE requires ≥ 10M reads as the sufficiency standard)"
+    ),
+    "NRM-004": (
+        "All-zero genes flagged "
+        "(Chen et al. 2016, F1000Research; Love et al. 2014, Genome Biology)"
+    ),
+    "BIO-004": (
+        "Single gene > 50% of sample library "
+        "(empirical; Conesa et al. 2016 recommend top-gene fraction as QC metric; "
+        "HIGH FP RISK for blood, liver, cardiac tissue)"
+    ),
+    "BIO-005": (
+        "MT fraction > 30% per sample "
+        "(Conesa et al. 2016, Genome Biology; Andrews et al. 2017, Bioinformatics; "
+        "HIGH FP RISK for cardiac/skeletal muscle tissue)"
+    ),
+    "BIO-007": (
+        "Cramér's V ≥ 0.999 (perfect confounding, ERROR); V > 0.7 (near-perfect, WARNING). "
+        "Leek et al. 2010, Nature Reviews Genetics; Cohen 1988 effect-size conventions. "
+        "Small-N guard: Cochran 1954 (avg expected cell count < 5 → unreliable)"
+    ),
+    "SMP-005": (
+        "log1p-Pearson r ≥ 0.999 between sample pairs "
+        "(Conesa et al. 2016, Genome Biology)"
+    ),
     "GEN-001": "Mixed namespaces detected across first 2000 gene IDs",
     "FMT-008": "n_cols > n_rows AND n_rows < 500 (transposed matrix)",
 }

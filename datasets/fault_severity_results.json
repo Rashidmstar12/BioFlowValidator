@@ -1,0 +1,383 @@
+[
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=1.5\u00d7 (achieved\u22481.5\u00d7)",
+    "injected_ratio": 1.5,
+    "achieved_ratio": 1.5,
+    "rule_id": "NRM-002",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=2.0\u00d7 (achieved\u22482.0\u00d7)",
+    "injected_ratio": 2.0,
+    "achieved_ratio": 2.0,
+    "rule_id": "NRM-002",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=3.0\u00d7 (achieved\u22483.0\u00d7)",
+    "injected_ratio": 3.0,
+    "achieved_ratio": 3.0,
+    "rule_id": "NRM-002",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=5.0\u00d7 (achieved\u22485.0\u00d7)",
+    "injected_ratio": 5.0,
+    "achieved_ratio": 5.0,
+    "rule_id": "NRM-002",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=8.0\u00d7 (achieved\u22488.0\u00d7)",
+    "injected_ratio": 8.0,
+    "achieved_ratio": 7.99,
+    "rule_id": "NRM-002",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=9.0\u00d7 (achieved\u22489.0\u00d7)",
+    "injected_ratio": 9.0,
+    "achieved_ratio": 9.0,
+    "rule_id": "NRM-002",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=10.0\u00d7 (achieved\u224810.0\u00d7)",
+    "injected_ratio": 10.0,
+    "achieved_ratio": 9.99,
+    "rule_id": "NRM-002",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=10.5\u00d7 (achieved\u224810.5\u00d7)",
+    "injected_ratio": 10.5,
+    "achieved_ratio": 10.5,
+    "rule_id": "NRM-002",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=12.0\u00d7 (achieved\u224812.0\u00d7)",
+    "injected_ratio": 12.0,
+    "achieved_ratio": 11.99,
+    "rule_id": "NRM-002",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=15.0\u00d7 (achieved\u224815.0\u00d7)",
+    "injected_ratio": 15.0,
+    "achieved_ratio": 15.0,
+    "rule_id": "NRM-002",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=20.0\u00d7 (achieved\u224820.0\u00d7)",
+    "injected_ratio": 20.0,
+    "achieved_ratio": 19.98,
+    "rule_id": "NRM-002",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "library_size_ratio",
+    "fault_parameter": "ratio=50.0\u00d7 (achieved\u224850.0\u00d7)",
+    "injected_ratio": 50.0,
+    "achieved_ratio": 50.0,
+    "rule_id": "NRM-002",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9850",
+    "injected_r": 0.985,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9900",
+    "injected_r": 0.99,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9930",
+    "injected_r": 0.993,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9950",
+    "injected_r": 0.995,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9970",
+    "injected_r": 0.997,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9980",
+    "injected_r": 0.998,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9990",
+    "injected_r": 0.999,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=0.9995",
+    "injected_r": 0.9995,
+    "rule_id": "SMP-005",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "near_identical_samples",
+    "fault_parameter": "pearson_r=1.0000",
+    "injected_r": 1.0,
+    "rule_id": "SMP-005",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.00",
+    "injected_confounding": 0.0,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.30",
+    "injected_confounding": 0.3,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.50",
+    "injected_confounding": 0.5,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.60",
+    "injected_confounding": 0.6,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.65",
+    "injected_confounding": 0.65,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.70",
+    "injected_confounding": 0.7,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.75",
+    "injected_confounding": 0.75,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.80",
+    "injected_confounding": 0.8,
+    "rule_id": "BIO-007",
+    "status": "PASS",
+    "severity": "ERROR",
+    "fires": false
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=0.90",
+    "injected_confounding": 0.9,
+    "rule_id": "BIO-007",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "batch_confounding",
+    "fault_parameter": "confounding_level=1.00",
+    "injected_confounding": 1.0,
+    "rule_id": "BIO-007",
+    "status": "FAIL",
+    "severity": "ERROR",
+    "fires": true
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=10, n_cols=200",
+    "injected_n_rows": 10,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=50, n_cols=200",
+    "injected_n_rows": 50,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=100, n_cols=200",
+    "injected_n_rows": 100,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "FAIL",
+    "severity": "WARNING",
+    "fires": true
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=200, n_cols=200",
+    "injected_n_rows": 200,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=499, n_cols=200",
+    "injected_n_rows": 499,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=500, n_cols=200",
+    "injected_n_rows": 500,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=501, n_cols=200",
+    "injected_n_rows": 501,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=1000, n_cols=200",
+    "injected_n_rows": 1000,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  },
+  {
+    "fault_type": "transposed_matrix",
+    "fault_parameter": "n_rows=5000, n_cols=200",
+    "injected_n_rows": 5000,
+    "injected_n_cols": 200,
+    "rule_id": "FMT-008",
+    "status": "PASS",
+    "severity": "WARNING",
+    "fires": false
+  }
+]

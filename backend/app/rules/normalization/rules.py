@@ -49,6 +49,19 @@ class LibrarySizeRule(BaseRule):
     severity = "WARNING"
     description = "Extreme library size variation (max/min > 10×) between samples may indicate quality issues."
 
+    # 10× max/min library size threshold.  Conesa et al. 2016 (Genome Biology,
+    # "A survey of best practices for RNA-seq data analysis") recommend
+    # inspecting library size distributions as a primary QC step and note that
+    # large imbalances introduce biases that TMM/RLE normalization may not fully
+    # correct.  Robinson & Oshlack 2010 (Genome Biology, "A scaling normalization
+    # method for differential expression analysis of RNA-seq data") show that
+    # highly unequal library sizes inflate false-positive rates in DE analysis.
+    # The 10× ratio is a widely-used empirical threshold in community workflows
+    # (e.g. Bioconductor RNA-seq vignettes); no single paper defines it as a
+    # hard cutoff.  Reviewers should note that 5× imbalance can also bias
+    # DESeq2 size factors in small experiments — this threshold is conservative.
+    _RATIO_THRESHOLD = 10
+
     def run(self, context: ValidationContext) -> RuleResult:
         if context.count_matrix is None:
             return self._skip("Count matrix not available.")
@@ -63,10 +76,11 @@ class LibrarySizeRule(BaseRule):
         else:
             ratio = lib_sizes.max() / lib_sizes.min()
 
-        if ratio > 10:
+        if ratio > self._RATIO_THRESHOLD:
             worst = lib_sizes.idxmin()
             return self._fail(
-                f"Library size ratio (max/min) = {ratio:.1f}×, exceeding the 10× threshold.",
+                f"Library size ratio (max/min) = {ratio:.1f}×, exceeding the "
+                f"{self._RATIO_THRESHOLD}× threshold.",
                 affected_items=[f"Smallest library: '{worst}' ({int(lib_sizes[worst]):,} counts)"],
                 suggestion=(
                     "Investigate low-count samples for sequencing failures. "
@@ -87,6 +101,17 @@ class ZeroLibraryRule(BaseRule):
     severity = "ERROR"
     description = "Samples with near-zero total counts indicate failed libraries."
 
+    # 1,000-count threshold for a failed library.  While sequencing best
+    # practices (e.g. ENCODE RNA-seq standards, 2011; doi:10.1101/gr.136184.111)
+    # require > 10 million mapped reads per sample, a total count below 1,000
+    # is diagnostic of a catastrophic library failure (no RNA recovered, failed
+    # ligation, adapter contamination covering the entire signal).  This is a
+    # conservative lower-bound sentinel rather than a quality-sufficiency
+    # criterion.  Samples passing this gate may still have inadequate depth;
+    # the ENCODE minimum of 30M reads per sample remains the authoritative
+    # sufficiency guideline.  Caveat: targeted panels or small spike-in sets
+    # can legitimately have total counts below 1,000 — add those assay types
+    # to the expected_skips list in your benchmark YAML.
     _THRESHOLD = 1000
 
     def run(self, context: ValidationContext) -> RuleResult:
@@ -110,6 +135,18 @@ class AllZeroGeneRule(BaseRule):
     category = "normalization"
     severity = "WARNING"
     description = "Genes with all-zero counts across all samples should be filtered out before DE analysis."
+
+    # All-zero gene filtering is recommended in all major DE analysis workflows.
+    # Chen et al. 2016 (F1000Research, "From reads to genes to pathways:
+    # differential expression analysis of RNA-seq experiments using Rsubread and
+    # the edgeR quasi-likelihood pipeline") explicitly filter genes with zero
+    # counts in all samples as the first step.  Love et al. 2014 (Genome
+    # Biology, "Moderated estimation of fold change and dispersion for RNA-seq
+    # data with DESeq2") note that genes not expressed in any sample contribute
+    # no information and increase the multiple-testing burden.  False-positive
+    # risk: targeted panels or reduced-representation libraries may intentionally
+    # omit most genes; the fraction (not just presence) of all-zero genes is the
+    # key signal.  A library with 80%+ all-zero genes warrants further review.
 
     def run(self, context: ValidationContext) -> RuleResult:
         if context.count_matrix is None:
@@ -137,6 +174,18 @@ class LowCountDominanceRule(BaseRule):
     category = "normalization"
     severity = "WARNING"
     description = "More than 50% of genes with median count < 1 suggests very sparse or low-depth data."
+
+    # >50% low-count gene fraction as a sparsity indicator.  Robinson & Oshlack
+    # 2010 (Genome Biology) and Chen et al. 2016 (F1000Research) recommend
+    # retaining only genes with CPM > 1 in at least N samples (where N equals
+    # the smallest group size) before DE analysis.  In a typical ~30 M read
+    # library this corresponds to a raw count threshold of ~6 per gene per
+    # sample.  If the median count is < 1, the gene is rarely detected even at
+    # this sequencing depth, and most statistical models will produce unreliable
+    # dispersion estimates.  The 50% fraction threshold is an empirical alert
+    # that the entire library may be under-sequenced or the wrong file supplied.
+    # Caveat: single-cell pseudo-bulk or low-input libraries may legitimately
+    # have high sparsity; apply this threshold only to standard bulk RNA-seq.
 
     def run(self, context: ValidationContext) -> RuleResult:
         if context.count_matrix is None:

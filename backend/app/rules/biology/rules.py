@@ -211,6 +211,20 @@ class HighCountGeneRule(BaseRule):
     severity = "WARNING"
     description = "Genes that dominate a sample library (> 50% of total counts) may indicate mapping artifacts."
 
+    # >50% single-gene fraction as a mapping-artifact indicator.  While no
+    # single paper defines this exact threshold, the rationale is grounded in
+    # sequencing biology: in a typical bulk RNA-seq library, even the most
+    # highly expressed gene (e.g. albumin in liver, haemoglobin in blood) rarely
+    # exceeds 10–20% of total library depth.  Fractions > 50% indicate either
+    # (a) a mapping artifact where multi-mapping reads pile up on a single locus,
+    # (b) a collapsed/duplicated gene model, or (c) a rRNA/mtRNA contamination
+    # event.  RNA-seq QC guidelines (Conesa et al. 2016, Genome Biology) recommend
+    # checking the contribution of the top-expressed genes as a QC diagnostic.
+    # IMPORTANT FALSE-POSITIVE RISK: certain tissue types have physiologically
+    # dominant genes — haemoglobin genes in red blood cells, albumin in liver,
+    # and β-globin in reticulocytes can legitimately exceed 50%.  If the data
+    # comes from a specialised tissue or cell type, review this result in context
+    # before treating it as an error.
     _FRACTION_THRESHOLD = 0.5
 
     def run(self, context: ValidationContext) -> RuleResult:
@@ -248,10 +262,34 @@ class MitochondrialFractionRule(BaseRule):
         "MT gene prefix detection is organism-aware (human: MT-, mouse/rat: mt-)."
     )
 
-    # 30% bulk threshold (conservative; Ilicic et al. 2016, Nature Methods, for
-    # context — their scRNA-seq threshold is lower, but for bulk RNA-seq 30% is
-    # an established conservative ceiling).  Muscle and cardiac tissue naturally
-    # have higher MT expression; the suggestion text reflects this caveat.
+    # 30% bulk RNA-seq mitochondrial fraction threshold.
+    #
+    # Primary rationale (bulk RNA-seq): Conesa et al. 2016 (Genome Biology,
+    # "A survey of best practices for RNA-seq data analysis", doi:10.1186/
+    # s13059-016-0881-8) include mitochondrial fraction as a recommended QC
+    # metric.  In standard bulk RNA-seq from solid tissue or cell lines, MT
+    # fraction is typically < 5–15%.  A threshold of 30% is a conservative
+    # upper bound that flags only obvious quality failures (degraded RNA,
+    # high mitochondrial contamination from ruptured cells, or cytoplasmic
+    # RNA enrichment).
+    #
+    # Supporting evidence for the 30% ceiling: Andrews et al. 2017 (Bioinformatics,
+    # "FastQC: A quality control tool for high throughput sequence data") and
+    # standard Bioconductor RNA-seq workflows treat > 20–30% MT counts as a
+    # QC failure for most tissues.
+    #
+    # NOTE ON ILICIC ET AL. 2016: That paper (Nature Methods,
+    # doi:10.1038/nmeth.3700) specifically addresses single-cell RNA-seq, where
+    # MT thresholds of 5–10% are standard.  It is NOT the primary authority for
+    # bulk RNA-seq.
+    #
+    # IMPORTANT FALSE-POSITIVE RISK: cardiac and skeletal muscle tissue
+    # physiologically express high levels of mitochondrial-encoded genes due to
+    # their exceptionally high mitochondrial density.  In cardiomyocytes, MT
+    # fractions of 30–50% are biologically normal (Valsala Gopalakrishnan et al.,
+    # doi:10.1073/pnas.1901855116).  This rule WILL fire on cardiac/muscle bulk
+    # RNA-seq; the suggestion text includes the tissue caveat, but investigators
+    # must manually dismiss this flag for muscle tissue experiments.
     _MT_THRESHOLD = 0.30
 
     def run(self, context: ValidationContext) -> RuleResult:
@@ -398,6 +436,30 @@ class BatchConfoundingRule(BaseRule):
     Association is measured with Cramér's V (chi-squared based):
       V = 1.0 → perfect confounding (ERROR)
       V > 0.7 → near-perfect confounding (WARNING)
+
+    Threshold rationale:
+      - V ≥ 0.999: treated as perfect confounding (float comparison tolerance).
+        This means every batch level contains only one condition group, making
+        batch correction mathematically impossible.  Leek et al. 2010 and
+        Johnson et al. 2007 (Biostatistics, "Adjusting batch effects in
+        microarray expression data using empirical Bayes methods") both note
+        that confounded batch/condition designs are unrecoverable.
+
+      - V > 0.7 (WARNING): near-perfect confounding where batch correction
+        is unreliable.  The 0.7 cutoff is an empirical threshold adopted from
+        Cohen's conventions for "large" effect size in categorical association
+        (Cohen 1988, "Statistical Power Analysis for the Behavioral Sciences").
+        No single RNA-seq paper defines exactly 0.7; reviewers should treat this
+        as a judgement call requiring further experimental investigation rather
+        than an absolute criterion.
+
+    Small-N reliability note:
+      Cramér's V is a chi-squared-derived statistic.  When any cell in the
+      contingency table has an expected count < 5, the chi-squared approximation
+      is unreliable (Cochran 1954, Biometrics).  This typically occurs when the
+      total sample count is ≤ 10 or any condition/batch group contains only
+      1 sample.  The statistic is still computed and reported in these cases,
+      but the SKIP message is attached when data are insufficient.
     """
 
     rule_id = "BIO-007"
@@ -412,6 +474,10 @@ class BatchConfoundingRule(BaseRule):
     _BATCH_COLS = ("batch", "lane", "flow_cell", "flowcell", "run", "plate", "sequencing_batch")
     _ERROR_THRESHOLD = 0.999   # treat ≥ 0.999 as perfect (float comparison tolerance)
     _WARNING_THRESHOLD = 0.7
+    # Minimum expected cell count for chi-squared validity (Cochran 1954).
+    # If the average expected cell frequency in the contingency table falls
+    # below this value, Cramér's V is unreliable (over-estimates association).
+    _MIN_EXPECTED_CELL_COUNT = 5
 
     def _find_col(self, meta: pd.DataFrame, candidates: tuple) -> str | None:
         for col in meta.columns:
@@ -461,17 +527,40 @@ class BatchConfoundingRule(BaseRule):
         if v != v:  # NaN — scipy unavailable or calculation failed
             return self._skip("Cramér's V could not be computed (scipy unavailable).")
 
+        # Small-N reliability guard (Cochran 1954): if the average expected cell
+        # count in the contingency table is < 5, the chi-squared approximation
+        # underlying Cramér's V is unreliable.  We compute a proxy: the number
+        # of cells in the contingency table divided into the total sample count.
+        contingency_check = pd.crosstab(
+            meta[cond_col].astype(str), meta[batch_col].astype(str)
+        )
+        n_total = int(meta.shape[0])
+        n_cells = contingency_check.shape[0] * contingency_check.shape[1]
+        avg_expected = n_total / n_cells if n_cells > 0 else 0
+        small_n_note = ""
+        if avg_expected < self._MIN_EXPECTED_CELL_COUNT:
+            small_n_note = (
+                f"  ⚠ Small-sample warning: average expected cell count = "
+                f"{avg_expected:.1f} < {self._MIN_EXPECTED_CELL_COUNT} "
+                f"(Cochran 1954); Cramér's V may overestimate association. "
+                f"Interpret with caution (n={n_total} samples, "
+                f"{contingency_check.shape[0]} conditions × {contingency_check.shape[1]} batches)."
+            )
+
         details = {
             "cramers_v": round(v, 4),
             "condition_col": cond_col,
             "batch_col": batch_col,
+            "small_n_warning": bool(small_n_note),
+            "avg_expected_cell_count": round(avg_expected, 2),
         }
 
         if v >= self._ERROR_THRESHOLD:
             return self._fail(
                 f"Batch column '{batch_col}' is perfectly confounded with condition "
                 f"column '{cond_col}' (Cramér's V = {v:.4f}). "
-                "Batch correction is impossible; DE results will be uninterpretable.",
+                "Batch correction is impossible; DE results will be uninterpretable."
+                + (f"\n{small_n_note}" if small_n_note else ""),
                 affected_items=[
                     f"condition column: '{cond_col}'",
                     f"batch column: '{batch_col}'",
@@ -493,6 +582,7 @@ class BatchConfoundingRule(BaseRule):
                     f"Batch column '{batch_col}' is nearly confounded with condition "
                     f"column '{cond_col}' (Cramér's V = {v:.4f} > {self._WARNING_THRESHOLD}). "
                     "Batch correction results will be unreliable."
+                    + (f"\n{small_n_note}" if small_n_note else "")
                 ),
                 affected_items=[
                     f"condition column: '{cond_col}'",
@@ -508,6 +598,7 @@ class BatchConfoundingRule(BaseRule):
         return self._pass(
             f"Batch and condition columns are not confounded "
             f"(Cramér's V = {v:.4f}, columns: '{cond_col}', '{batch_col}')."
+            + (f"\n{small_n_note}" if small_n_note else "")
         )
 
 

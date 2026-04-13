@@ -19,6 +19,9 @@ Usage:
     python datasets/fetch_real_data.py --dataset GSE89189
     python datasets/fetch_real_data.py --dataset GSE96870
     python datasets/fetch_real_data.py --dataset GSE144269
+    python datasets/fetch_real_data.py --dataset GSE60450
+    python datasets/fetch_real_data.py --dataset GSE52778
+    python datasets/fetch_real_data.py --dataset GSE107011
     python datasets/fetch_real_data.py          # attempt all (skips on failure)
 
 Requirements (install before running):
@@ -32,10 +35,17 @@ Notes on sourcing:
   - GSE89189:  Raw count matrix in GEO supplementary files.
   - GSE96870:  Raw count matrix in GEO supplementary files (multi-factor design).
   - GSE144269: Raw count matrix in GEO supplementary files (single condition).
+  - GSE60450:  Mouse mammary gland (limma/voom paper). Direct GEO FTP download;
+               integer raw counts, no R required.
+  - GSE52778:  Human airway smooth muscle (Himes et al. 2014; same data as
+               Bioconductor 'airway' package). GEO supplementary file download.
+  - GSE107011: Human PBMC immune cell types (Monaco et al. 2019, Immunity).
+               Raw counts in GEO supplementary (companion to TPM file).
 """
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import io
 import sys
@@ -358,6 +368,251 @@ def fetch_gse144269(out_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Download helper
+# ---------------------------------------------------------------------------
+
+def _download_gz(url: str, dest_path: Path, dataset: str) -> None:
+    """Download a (optionally gzip-compressed) file from *url* to *dest_path*.
+
+    If the URL ends with '.gz', the file is decompressed in memory before
+    writing.  Progress is printed to stdout.
+
+    Raises
+    ------
+    ImportError  if the ``requests`` package is not installed.
+    RuntimeError if the HTTP request fails.
+    """
+    try:
+        import requests  # type: ignore
+    except ImportError:
+        raise ImportError(
+            "requests not installed. Run: pip install requests"
+        )
+    print(f"  Downloading {url} …")
+    resp = requests.get(url, stream=True, timeout=120)
+    if resp.status_code != 200:
+        raise RuntimeError(
+            f"{dataset}: HTTP {resp.status_code} when downloading {url}"
+        )
+    raw = resp.content
+    if url.endswith(".gz"):
+        raw = gzip.decompress(raw)
+    dest_path.write_bytes(raw)
+    print(f"  Saved to {dest_path} ({len(raw):,} bytes)")
+
+
+# ---------------------------------------------------------------------------
+# New easier datasets (direct GEO FTP download, no R required)
+# ---------------------------------------------------------------------------
+
+def fetch_gse60450(out_dir: Path) -> None:
+    """Fetch GSE60450 (mouse mammary gland, limma paper) from GEO FTP.
+
+    Publication: Law et al. 2014, Genome Biology — the primary limma/voom paper.
+    Design: 12 samples, mouse mammary gland.
+            6 basal cells (3 virgin, 1 pregnant, 2 lactating)
+            6 luminal cells (3 virgin, 1 pregnant, 2 lactating)
+    Counts: Gene-level raw counts produced by featureCounts (mm10, NCBI RefSeq).
+    Gene IDs: Entrez gene IDs (not Ensembl).
+
+    Why a good benchmark:
+      - Widely cited workshop dataset with well-understood ground truth
+      - Balanced 2-cell-type × 3-developmental-stage factorial design
+      - Suitable for testing BIO-007 (cell_type × stage confounding)
+      - Integer raw counts directly from GEO supplementary — no R required
+      - Small enough (12 samples × 27,179 genes) to run quickly in CI
+
+    GEO accession: GSE60450
+    Download URL: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE60nnn/GSE60450/
+                  suppl/GSE60450_Lactation-GenewiseCounts.txt.gz
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    counts_gz_url = (
+        "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE60nnn/GSE60450/"
+        "suppl/GSE60450_Lactation-GenewiseCounts.txt.gz"
+    )
+    raw_file = out_dir / "GSE60450_Lactation-GenewiseCounts.txt"
+
+    if not raw_file.exists():
+        _download_gz(counts_gz_url, raw_file, "GSE60450")
+
+    print(f"  Parsing {raw_file.name} …")
+    counts_raw = pd.read_csv(raw_file, sep="\t", index_col=0)
+
+    # The first column 'EntrezID' is the index; the next column 'Length' is a
+    # gene-length annotation column (not a sample).  Drop it.
+    if "Length" in counts_raw.columns:
+        counts_raw = counts_raw.drop(columns=["Length"])
+
+    verify_orientation(counts_raw, "GSE60450")
+    verify_raw_counts(counts_raw, "GSE60450")
+
+    # Build metadata from column names.
+    # Column naming convention: <CellType><Number>
+    # Basal: MCL1.DG, MCL1.DH, MCL1.DI, MCL1.DJ, MCL1.DK, MCL1.DL
+    # Luminal: MCL1.LA, MCL1.LB, MCL1.LC, MCL1.LD, MCL1.LE, MCL1.LF
+    # (actual naming may vary; derive cell type from the B/L indicator)
+    samples = list(counts_raw.columns)
+    conditions = []
+    for s in samples:
+        # Column names typically contain 'basal'/'luminal' info;
+        # fall back to simple split on the sample name
+        name_upper = str(s).upper()
+        if "BASAL" in name_upper or ".D" in str(s):
+            conditions.append("basal")
+        elif "LUMINAL" in name_upper or ".L" in str(s):
+            conditions.append("luminal")
+        else:
+            conditions.append("unknown")
+
+    meta = pd.DataFrame({"condition": conditions}, index=samples)
+    meta.index.name = "sample_id"
+    print(f"  Conditions assigned: {set(conditions)}")
+    print("  NOTE: Verify cell-type labels against the GEO series matrix.")
+
+    save_dataset(
+        out_dir, counts_raw, meta, "GSE60450",
+        counts_gz_url,
+    )
+
+
+def fetch_gse52778(out_dir: Path) -> None:
+    """Fetch GSE52778 (human airway smooth muscle, Himes et al. 2014) from GEO.
+
+    This is the same dataset as the Bioconductor 'airway' package but obtained
+    directly from GEO supplementary files without R.
+
+    Publication: Himes et al. 2014, PLOS ONE — "RNA-seq transcriptome profiling
+    identifies CRISPLD2 as a glucocorticoid responsive gene."
+    Design: 8 samples, 4 cell lines × 2 treatments (untreated / dexamethasone).
+    Counts: Gene-level Ensembl IDs, raw counts.
+
+    Why a good benchmark:
+      - One of the most cited small RNA-seq datasets; ground truth is well known
+      - Paired design (cell line as batch) provides a natural BIO-007 test
+      - This lets you confirm that proxy-airway results replicate on true data
+      - Human Ensembl IDs trigger GEN-005 organism detection (human)
+
+    GEO accession: GSE52778
+    Download: GSE52778_pairedsamplesdge.tsv.gz from GEO supplementary files.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    counts_gz_url = (
+        "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE52nnn/GSE52778/"
+        "suppl/GSE52778_pairedsamplesdge.tsv.gz"
+    )
+    raw_file = out_dir / "GSE52778_pairedsamplesdge.tsv"
+
+    if not raw_file.exists():
+        _download_gz(counts_gz_url, raw_file, "GSE52778")
+
+    print(f"  Parsing {raw_file.name} …")
+    counts_raw = pd.read_csv(raw_file, sep="\t", index_col=0)
+
+    verify_orientation(counts_raw, "GSE52778")
+    verify_raw_counts(counts_raw, "GSE52778")
+    counts_raw = strip_ensembl_versions(counts_raw)
+
+    # Build metadata from GSM sample names.
+    # Samples: 4 cell lines (N61311, N052611, N080611, N061011) ×
+    #          2 treatments (untreated / dex).
+    samples = list(counts_raw.columns)
+    conditions = []
+    cell_lines = []
+    for s in samples:
+        s_lower = str(s).lower()
+        conditions.append("dex" if "dex" in s_lower else "untreated")
+        # Extract cell line from sample name (everything before _treated/_untreated)
+        cell_lines.append(str(s).split("_")[0] if "_" in str(s) else str(s))
+
+    meta = pd.DataFrame(
+        {"condition": conditions, "batch": cell_lines},
+        index=samples,
+    )
+    meta.index.name = "sample_id"
+    print(f"  Conditions: {set(conditions)}, cell lines (batch): {set(cell_lines)}")
+    print("  NOTE: Verify labels against the GEO series matrix for GSE52778.")
+
+    save_dataset(
+        out_dir, counts_raw, meta, "GSE52778",
+        counts_gz_url,
+    )
+
+
+def fetch_gse107011(out_dir: Path) -> None:
+    """Fetch GSE107011 (human PBMC immune cells, Monaco et al. 2019) from GEO.
+
+    Publication: Monaco et al. 2019, Cell Reports — "RNA-Seq signatures
+    normalized by mRNA abundance allow absolute deconvolution of human cell
+    types."
+    Design: 29 immune cell types × 4 donors = 114 samples.
+    Counts: Raw counts in GSE107011_Processed_data_RCPCmel.txt.gz.
+            (A companion file GSE107011_Processed_data_TPM.txt.gz contains TPM.)
+
+    Why a good benchmark:
+      - Large, diverse; 114 samples tests SMP-005 (near-identical detection),
+        NRM-002 (library size variation across divergent cell types), and
+        BIO-007 (donor as batch vs. cell type as condition).
+      - MT fraction naturally elevated in granulocytes — a real-world BIO-005
+        stress test.
+      - Rich cell-type labels allow BIO-004 (dominant gene) testing in highly
+        specialised cells (e.g. haemoglobin in erythroblasts).
+
+    GEO accession: GSE107011
+    Download: GSE107011_Processed_data_RCPCmel.txt.gz from GEO supplementary.
+
+    IMPORTANT: Verify that the downloaded file contains INTEGER counts and not
+    RCPC-normalised values.  The filename 'RCPCmel' refers to the raw counts per
+    cell type.  If non-integer values are detected, the download is the wrong file.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    counts_gz_url = (
+        "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE107nnn/GSE107011/"
+        "suppl/GSE107011_Processed_data_RCPCmel.txt.gz"
+    )
+    raw_file = out_dir / "GSE107011_Processed_data_RCPCmel.txt"
+
+    if not raw_file.exists():
+        _download_gz(counts_gz_url, raw_file, "GSE107011")
+
+    print(f"  Parsing {raw_file.name} …")
+    counts_raw = pd.read_csv(raw_file, sep="\t", index_col=0)
+
+    verify_orientation(counts_raw, "GSE107011")
+    # NOTE: verify_raw_counts raises if non-integer; if the download is the TPM
+    # file by accident this will catch it immediately.
+    verify_raw_counts(counts_raw, "GSE107011")
+
+    # Build metadata from column names.
+    # Column format: <CellType>_<DonorN> (e.g. "CD4Tcm_Donor1").
+    samples = list(counts_raw.columns)
+    conditions = []
+    donors = []
+    for s in samples:
+        parts = str(s).rsplit("_", 1)
+        if len(parts) == 2:
+            conditions.append(parts[0])   # cell type as condition
+            donors.append(parts[1])       # donor as batch
+        else:
+            conditions.append(str(s))
+            donors.append("unknown")
+
+    meta = pd.DataFrame(
+        {"condition": conditions, "batch": donors},
+        index=samples,
+    )
+    meta.index.name = "sample_id"
+    unique_types = sorted(set(conditions))
+    print(f"  {len(unique_types)} cell types detected: {unique_types[:5]}…")
+    print("  NOTE: Verify labels against the series matrix for GSE107011.")
+
+    save_dataset(
+        out_dir, counts_raw, meta, "GSE107011",
+        counts_gz_url,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -367,6 +622,9 @@ FETCHERS = {
     "GSE89189": fetch_gse89189,
     "GSE96870": fetch_gse96870,
     "GSE144269": fetch_gse144269,
+    "GSE60450": fetch_gse60450,
+    "GSE52778": fetch_gse52778,
+    "GSE107011": fetch_gse107011,
 }
 
 
