@@ -38,22 +38,20 @@ $PY3 - <<'SCIPY_CHECK'
 import sys
 try:
     import scipy
-    from packaging.version import Version
-    if Version(scipy.__version__) < Version("1.11"):
-        print(f"  ERROR: scipy {scipy.__version__} found; >= 1.11 required for BIO-007.")
-        sys.exit(1)
-    print(f"  ✅  scipy {scipy.__version__}")
 except ImportError:
     print("  ERROR: scipy not installed. Run: pip install scipy>=1.11")
     sys.exit(1)
+try:
+    from packaging.version import Version
+    ok = Version(scipy.__version__) >= Version("1.11")
 except ImportError:
-    # packaging not available — do a crude string comparison
+    # packaging not available — fall back to integer tuple comparison
     parts = scipy.__version__.split(".")
-    major, minor = int(parts[0]), int(parts[1])
-    if (major, minor) < (1, 11):
-        print(f"  ERROR: scipy {scipy.__version__} found; >= 1.11 required for BIO-007.")
-        sys.exit(1)
-    print(f"  ✅  scipy {scipy.__version__} (version check via string split)")
+    ok = (int(parts[0]), int(parts[1])) >= (1, 11)
+if not ok:
+    print(f"  ERROR: scipy {scipy.__version__} found; >= 1.11 required for BIO-007.")
+    sys.exit(1)
+print(f"  ✅  scipy {scipy.__version__}")
 SCIPY_CHECK
 echo ""
 

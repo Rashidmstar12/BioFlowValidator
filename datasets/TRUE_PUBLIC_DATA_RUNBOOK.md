@@ -266,7 +266,7 @@ grep -A 3 "GSE60450" datasets/benchmark_results.md
 |---|---|
 | FMT-* | PASS |
 | GEN-001 | PASS (HGNC gene symbols — validated as symbol namespace) |
-| GEN-005 | PASS/INFO (gene symbols; human organism inferred if ENSG not present) |
+| GEN-005 | SKIP (gene symbols only; Ensembl prefix required for organism inference — no ENSG IDs present) |
 | NRM-001 | PASS (RCPCmel file = raw integer counts; TPM file would FAIL) |
 | NRM-002 | ⚠️ POSSIBLE WARNING — extreme library size variation across cell types |
 | SMP-005 | PASS (500-sample guard; 114 samples is within limit) |
