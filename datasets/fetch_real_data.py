@@ -139,6 +139,10 @@ def save_dataset(
     meta.to_csv(out_dir / "metadata.tsv", sep="\t")
     write_checksums(out_dir)
 
+    # Mark this dataset as true_public_data now that real files are in place.
+    (out_dir / "benchmark_mode.txt").write_text("true_public_data\n")
+    print(f"  ✅  benchmark_mode.txt set to true_public_data")
+
     # Append download provenance to README
     readme = out_dir / "README.md"
     note = (
