@@ -75,3 +75,73 @@ def test_non_biological_fails():
     ctx = _make_ctx(genes)
     result = NonBiologicalIDRule().run(ctx)
     assert result.status == "FAIL"
+
+
+# ── _skip when count_matrix is None ──────────────────────────────────────────
+
+def test_gene_id_format_skips_no_matrix():
+    from app.rules.gene.rules import GeneIDFormatRule
+    ctx = _ctx_from_dfs()
+    assert GeneIDFormatRule().run(ctx).status == "SKIP"
+
+
+def test_gene_id_format_skips_empty_matrix():
+    """A count matrix with no rows must trigger a SKIP."""
+    df = pd.DataFrame(columns=["s1", "s2"])
+    ctx = _ctx_from_dfs(count_df=df)
+    assert GeneIDFormatRule().run(ctx).status == "SKIP"
+
+
+def test_duplicate_gene_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert DuplicateGeneRule().run(ctx).status == "SKIP"
+
+
+def test_version_suffix_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert VersionSuffixRule().run(ctx).status == "SKIP"
+
+
+def test_non_biological_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert NonBiologicalIDRule().run(ctx).status == "SKIP"
+
+
+# ── _classify_id edge cases ───────────────────────────────────────────────────
+
+def test_classify_id_versioned_ensembl():
+    from app.rules.gene.rules import _classify_id
+    assert _classify_id("ENSG00000141510.14") == "ensembl_versioned"
+
+
+def test_classify_id_non_human_ensembl():
+    from app.rules.gene.rules import _classify_id
+    assert _classify_id("ENSMUSG00000029580") == "ensembl"
+
+
+def test_classify_id_entrez():
+    from app.rules.gene.rules import _classify_id
+    assert _classify_id("7157") == "entrez"
+
+
+# ── OrganismDetectionRule edge cases ─────────────────────────────────────────
+
+def test_organism_detection_skips_empty_matrix():
+    from app.rules.gene.rules import OrganismDetectionRule
+    df = pd.DataFrame(columns=["s1", "s2"])
+    ctx = _ctx_from_dfs(count_df=df)
+    assert OrganismDetectionRule().run(ctx).status == "SKIP"
+
+
+def test_organism_detection_low_confidence_skips():
+    """When < 80% of IDs match a single species, the rule skips with a best-guess."""
+    from app.rules.gene.rules import OrganismDetectionRule
+    # 60% human ENSG IDs, 40% random — below the 80% confidence threshold
+    human_genes = [f"ENSG{i:011d}" for i in range(1, 13)]   # 12 human
+    other_genes = [f"random_{i}" for i in range(1, 9)]        # 8 unknown
+    df = make_count_matrix(genes=human_genes + other_genes)
+    ctx = _ctx_from_dfs(count_df=df)
+    result = OrganismDetectionRule().run(ctx)
+    assert result.status == "SKIP"
+    # best-guess organism should still be stored in flags
+    assert ctx.flags.get("organism") == "human"

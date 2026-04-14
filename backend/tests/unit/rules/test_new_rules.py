@@ -429,3 +429,186 @@ class TestERCCSpikeInRule:
     def test_no_matrix_skips(self):
         ctx = _ctx()
         assert ERCCSpikeInRule().run(ctx).status == "SKIP"
+
+
+# ===========================================================================
+# Extra coverage: BIO-006 HousekeepingGeneRule — additional paths
+# ===========================================================================
+
+class TestHousekeepingGeneRuleExtraPaths:
+    def test_no_matrix_skips(self):
+        ctx = _ctx()
+        assert HousekeepingGeneRule().run(ctx).status == "SKIP"
+
+    def test_mouse_ensembl_path_used(self):
+        """When organism=mouse, mouse HK Ensembl map is used."""
+        from app.rules.biology.rules import _MOUSE_HK_ENSEMBL
+        # Include 3 of the 10 mouse HK Ensembl IDs
+        hk_ids = list(_MOUSE_HK_ENSEMBL.keys())[:3]
+        other_ids = [f"ENSMUSG{i:011d}" for i in range(100, 300)]
+        genes = hk_ids + other_ids
+        rng = np.random.default_rng(30)
+        values = rng.integers(1, 100, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        ctx = _ctx(count_df=df, flags={"organism": "mouse"})
+        result = HousekeepingGeneRule().run(ctx)
+        assert result.status == "PASS"
+
+    def test_entrez_id_path_skips(self):
+        """Pure Entrez IDs (integers) should skip the housekeeping check."""
+        # Entrez IDs: not Ensembl, not symbols → < 50% symbols → SKIP
+        genes = [str(i) for i in range(1000, 1200)]
+        rng = np.random.default_rng(31)
+        values = rng.integers(1, 100, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        ctx = _ctx(count_df=df)
+        result = HousekeepingGeneRule().run(ctx)
+        assert result.status == "SKIP"
+
+    def test_symbol_path_fails_all_hk_missing(self):
+        """Symbol path: when ≥ 80% of housekeeping genes are absent, rule fails."""
+        # Use non-HK gene symbols that satisfy the symbol regex
+        genes = [f"GENE{i:02d}" for i in range(100)]  # e.g. GENE00–GENE99
+        rng = np.random.default_rng(32)
+        values = rng.integers(1, 100, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        ctx = _ctx(count_df=df)
+        result = HousekeepingGeneRule().run(ctx)
+        assert result.status == "FAIL"
+
+
+# ===========================================================================
+# Extra coverage: BIO-007 BatchConfoundingRule — additional paths
+# ===========================================================================
+
+class TestBatchConfoundingRuleExtraPaths:
+    def _meta_with_batch(self, conditions, batches):
+        samples = [f"s{i}" for i in range(len(conditions))]
+        return pd.DataFrame(
+            {"condition": conditions, "batch": batches},
+            index=samples,
+        )
+
+    def test_no_condition_column_skips(self):
+        """BIO-007 skips when the metadata has no condition column."""
+        meta = pd.DataFrame(
+            {"batch": ["A", "B", "A", "B", "A", "B"]},
+            index=[f"s{i}" for i in range(6)],
+        )
+        ctx = _ctx(count_df=make_count_matrix(), meta_df=meta)
+        result = BatchConfoundingRule().run(ctx)
+        assert result.status == "SKIP"
+
+    def test_cramers_v_single_level_batch(self):
+        """A single-level batch column results in V=0 and a PASS."""
+        meta = self._meta_with_batch(
+            conditions=["control"] * 3 + ["treated"] * 3,
+            batches=["A"] * 6,  # all samples in one batch
+        )
+        ctx = _ctx(count_df=make_count_matrix(), meta_df=meta)
+        result = BatchConfoundingRule().run(ctx)
+        # V = 0 because contingency table has only 1 batch column → PASS
+        assert result.status == "PASS"
+
+    def test_scipy_unavailable_skips(self, monkeypatch):
+        """BIO-007 skips gracefully when scipy is not importable."""
+        import app.rules.biology.rules as bio_rules
+
+        original = bio_rules.BatchConfoundingRule._cramers_v
+
+        @staticmethod
+        def _nan_v(x, y):
+            return float("nan")
+
+        monkeypatch.setattr(bio_rules.BatchConfoundingRule, "_cramers_v", _nan_v)
+
+        meta = self._meta_with_batch(
+            conditions=["control"] * 3 + ["treated"] * 3,
+            batches=["A"] * 3 + ["B"] * 3,
+        )
+        ctx = _ctx(count_df=make_count_matrix(), meta_df=meta)
+        result = BatchConfoundingRule().run(ctx)
+        assert result.status == "SKIP"
+
+
+# ===========================================================================
+# _detect_organism helper (biology/rules.py lines 25, 34-36)
+# ===========================================================================
+
+class TestDetectOrganism:
+    """Direct unit tests for the _detect_organism helper in biology/rules.py."""
+
+    def test_empty_list_returns_unknown(self):
+        from app.rules.biology.rules import _detect_organism
+        assert _detect_organism([]) == "unknown"
+
+    def test_mouse_ids_detected(self):
+        from app.rules.biology.rules import _detect_organism
+        mouse_genes = [f"ENSMUSG{i:011d}" for i in range(1, 100)]
+        assert _detect_organism(mouse_genes) == "mouse"
+
+    def test_rat_ids_detected(self):
+        from app.rules.biology.rules import _detect_organism
+        rat_genes = [f"ENSRNOG{i:011d}" for i in range(1, 100)]
+        assert _detect_organism(rat_genes) == "rat"
+
+    def test_human_ids_detected(self):
+        from app.rules.biology.rules import _detect_organism
+        human_genes = [f"ENSG{i:011d}" for i in range(1, 100)]
+        assert _detect_organism(human_genes) == "human"
+
+    def test_mixed_returns_unknown(self):
+        from app.rules.biology.rules import _detect_organism
+        # No species exceeds 50%
+        genes = (
+            [f"ENSG{i:011d}" for i in range(1, 34)]
+            + [f"ENSMUSG{i:011d}" for i in range(1, 34)]
+            + [f"random_{i}" for i in range(1, 34)]
+        )
+        assert _detect_organism(genes) == "unknown"
+
+
+# ===========================================================================
+# BIO-005 — _detect_organism auto-detection for mouse (no organism flag)
+# ===========================================================================
+
+class TestMitochondrialFractionMouseAutodetect:
+    def test_mouse_mt_autodetected_without_flag(self):
+        """BIO-005 auto-detects mouse organism when context flag is absent."""
+        genes = [f"ENSMUSG{i:011d}" for i in range(1, 51)] + [
+            "mt-Nd1", "mt-Nd2", "mt-Co1", "mt-Co2"
+        ]
+        rng = np.random.default_rng(88)
+        values = rng.integers(1, 10, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        for g in ["mt-Nd1", "mt-Nd2", "mt-Co1", "mt-Co2"]:
+            df.loc[g] = 2000
+        ctx = _ctx(count_df=df)  # no organism flag — auto-detect must handle this
+        result = MitochondrialFractionRule().run(ctx)
+        assert result.status == "FAIL"
+
+
+# ===========================================================================
+# _cramers_v — ImportError path (biology/rules.py lines 511-512)
+# ===========================================================================
+
+class TestCramersVScipy:
+    def test_cramers_v_returns_nan_when_scipy_missing(self, monkeypatch):
+        """_cramers_v returns NaN (float) when scipy.stats import fails."""
+        import sys
+
+        original = sys.modules.get("scipy.stats")
+        # Setting module to None causes 'from scipy.stats import ...' to raise ImportError
+        monkeypatch.setitem(sys.modules, "scipy.stats", None)
+        try:
+            v = BatchConfoundingRule._cramers_v(
+                pd.Series(["A", "B", "A"]),
+                pd.Series(["X", "Y", "X"]),
+            )
+            assert v != v  # NaN != NaN is the canonical NaN check
+        finally:
+            # Restore original to avoid breaking subsequent tests
+            if original is not None:
+                sys.modules["scipy.stats"] = original
+            elif "scipy.stats" in sys.modules:
+                del sys.modules["scipy.stats"]
