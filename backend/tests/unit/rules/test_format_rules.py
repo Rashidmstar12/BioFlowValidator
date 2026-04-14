@@ -123,3 +123,61 @@ def test_whitespace_passes_clean_names():
     ctx = _ctx_from_dfs(count_df=make_count_matrix())
     result = WhitespaceNameRule().run(ctx)
     assert result.status == "PASS"
+
+
+# ── _skip when count_matrix is None (all format rules) ───────────────────────
+
+def test_delimiter_rule_skips_no_matrix():
+    from app.rules.format.rules import DelimiterRule
+    ctx = _ctx_from_dfs()
+    assert DelimiterRule().run(ctx).status == "SKIP"
+
+
+def test_header_rule_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert HeaderRule().run(ctx).status == "SKIP"
+
+
+def test_header_rule_fails_no_columns():
+    """A count matrix with zero columns triggers the 'no columns' fail path."""
+    df = pd.DataFrame(index=["G1", "G2"])  # 0 columns
+    ctx = _ctx_from_dfs(count_df=df)
+    result = HeaderRule().run(ctx)
+    assert result.status == "FAIL"
+    assert "no columns" in result.message.lower() or "missing" in result.message.lower()
+
+
+def test_duplicate_column_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert DuplicateColumnRule().run(ctx).status == "SKIP"
+
+
+def test_non_numeric_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert NonNumericRule().run(ctx).status == "SKIP"
+
+
+def test_negative_count_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert NegativeCountRule().run(ctx).status == "SKIP"
+
+
+def test_whitespace_skips_no_matrix():
+    ctx = _ctx_from_dfs()
+    assert WhitespaceNameRule().run(ctx).status == "SKIP"
+
+
+def test_whitespace_fails_special_char_in_column():
+    """Column name with special characters (e.g. '#') triggers a failure."""
+    df = make_count_matrix(samples=["ctrl#1", "ctrl_2", "ctrl_3", "treat_1", "treat_2", "treat_3"])
+    ctx = _ctx_from_dfs(count_df=df)
+    result = WhitespaceNameRule().run(ctx)
+    assert result.status == "FAIL"
+
+
+def test_whitespace_fails_whitespace_in_gene_id():
+    """Gene IDs with leading whitespace must trigger a failure."""
+    df = make_count_matrix(genes=[" ENSG00000000001"] + [f"ENSG{i:011d}" for i in range(2, 20)])
+    ctx = _ctx_from_dfs(count_df=df)
+    result = WhitespaceNameRule().run(ctx)
+    assert result.status == "FAIL"
