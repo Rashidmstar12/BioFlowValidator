@@ -38,7 +38,12 @@ export default function HomePage() {
       {/* Header */}
       <header className="bg-slate-900 text-white py-6 px-4 shadow-lg">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <img src="/favicon.svg" alt="BioFlowValidator logo" className="w-9 h-9 flex-shrink-0" />
+          <img
+            src="/favicon.svg"
+            alt="BioFlowValidator logo"
+            className="w-9 h-9 flex-shrink-0"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">BioFlowValidator</h1>
             <p className="text-slate-400 text-sm mt-0.5">
