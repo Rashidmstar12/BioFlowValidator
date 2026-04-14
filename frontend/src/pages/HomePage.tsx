@@ -37,11 +37,14 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <header className="bg-slate-900 text-white py-6 px-4 shadow-lg">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold tracking-tight">🧬 BioFlowValidator</h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Validate RNA-seq differential expression workflows before analysis
-          </p>
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
+          <img src="/favicon.svg" alt="BioFlowValidator logo" className="w-9 h-9 flex-shrink-0" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">BioFlowValidator</h1>
+            <p className="text-slate-400 text-sm mt-0.5">
+              Validate RNA-seq differential expression workflows before analysis
+            </p>
+          </div>
         </div>
       </header>
 
