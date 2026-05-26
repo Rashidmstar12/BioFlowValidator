@@ -46,27 +46,49 @@ async def upload_files(
     from app import store as _store
     _store.register_job_dir(job_id, job_dir)
 
-    count_data = await count_matrix.read()
-    if len(count_data) > _MAX_SIZE:
-        raise HTTPException(status_code=413, detail="Count matrix file exceeds 50 MB limit.")
+    chunk_size = 1024 * 1024  # 1MB
+    try:
+        # Read count_matrix in chunks to check size
+        count_data = b""
+        while True:
+            chunk = await count_matrix.read(chunk_size)
+            if not chunk:
+                break
+            count_data += chunk
+            if len(count_data) > _MAX_SIZE:
+                raise HTTPException(status_code=413, detail="Count matrix file exceeds 50 MB limit.")
 
-    # Store with a fixed, safe internal name
-    (job_dir / _COUNT_STORAGE_NAME).write_bytes(count_data)
+        # Store with a fixed, safe internal name
+        (job_dir / _COUNT_STORAGE_NAME).write_bytes(count_data)
 
-    manifest: dict = {
-        "count_matrix_filename": count_matrix.filename or "counts.tsv",
-        "count_matrix_size": len(count_data),
-    }
+        manifest: dict = {
+            "count_matrix_filename": count_matrix.filename or "counts.tsv",
+            "count_matrix_size": len(count_data),
+        }
 
-    if metadata and metadata.filename:
-        _validate_upload(metadata)
-        meta_data = await metadata.read()
-        if len(meta_data) > _MAX_SIZE:
-            raise HTTPException(status_code=413, detail="Metadata file exceeds 50 MB limit.")
-        (job_dir / _META_STORAGE_NAME).write_bytes(meta_data)
-        manifest["metadata_filename"] = metadata.filename
-        manifest["metadata_size"] = len(meta_data)
+        if metadata and metadata.filename:
+            _validate_upload(metadata)
+            # Read metadata in chunks to check size
+            meta_data = b""
+            while True:
+                chunk = await metadata.read(chunk_size)
+                if not chunk:
+                    break
+                meta_data += chunk
+                if len(meta_data) > _MAX_SIZE:
+                    raise HTTPException(status_code=413, detail="Metadata file exceeds 50 MB limit.")
 
-    (job_dir / _MANIFEST_NAME).write_text(json.dumps(manifest))
+            (job_dir / _META_STORAGE_NAME).write_bytes(meta_data)
+            manifest["metadata_filename"] = metadata.filename
+            manifest["metadata_size"] = len(meta_data)
+
+        (job_dir / _MANIFEST_NAME).write_text(json.dumps(manifest))
+
+    except Exception:
+        # Clean up directory on failure
+        if job_dir.exists():
+            import shutil
+            shutil.rmtree(job_dir)
+        raise
 
     return {"job_id": job_id, **manifest}

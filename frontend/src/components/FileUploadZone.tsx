@@ -47,12 +47,16 @@ export default function FileUploadZone({ onFilesSelected, disabled }: Props) {
     e.preventDefault();
     setDragging(false);
     const files = Array.from(e.dataTransfer.files);
+    let nextCountFile: File | null = countFile;
+    let nextMetaFile: File | null = metaFile;
     files.forEach((f) => {
       if (!validate(f)) return;
       const ext = extOf(f);
-      if (!countFile && ALLOWED.has(ext)) setCountFile(f);
-      else if (!metaFile && ALLOWED.has(ext)) setMetaFile(f);
+      if (!nextCountFile && ALLOWED.has(ext)) nextCountFile = f;
+      else if (!nextMetaFile && ALLOWED.has(ext)) nextMetaFile = f;
     });
+    if (nextCountFile) setCountFile(nextCountFile);
+    if (nextMetaFile) setMetaFile(nextMetaFile);
   }
 
   function handleSubmit() {

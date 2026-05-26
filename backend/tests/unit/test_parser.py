@@ -48,3 +48,20 @@ def test_parse_empty_bytes():
 def test_file_hashes_stored():
     ctx = parse_files(TSV_CONTENT, "counts.tsv")
     assert ctx.count_matrix_bytes == TSV_CONTENT
+
+
+def test_parse_excel_count_matrix():
+    import io
+    import pandas as pd
+    df = pd.DataFrame(
+        {"ctrl_1": [10, 5], "ctrl_2": [20, 15]},
+        index=["ENSG00000000001", "ENSG00000000002"]
+    )
+    out = io.BytesIO()
+    df.to_excel(out, index=True)
+    excel_bytes = out.getvalue()
+
+    ctx = parse_files(excel_bytes, "counts.xlsx")
+    assert ctx.count_matrix is not None
+    assert list(ctx.count_matrix.columns) == ["ctrl_1", "ctrl_2"]
+    assert list(ctx.count_matrix.index) == ["ENSG00000000001", "ENSG00000000002"]

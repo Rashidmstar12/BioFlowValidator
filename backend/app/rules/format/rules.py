@@ -22,6 +22,8 @@ class EncodingRule(BaseRule):
         data = context.count_matrix_bytes
         if not data:
             return self._skip("No count matrix bytes available.")
+        if context.count_filename.lower().endswith((".xlsx", ".xls")):
+            return self._skip("Encoding check skipped for binary Excel files.")
         result = chardet.detect(data)
         enc = (result.get("encoding") or "").lower()
         if enc in ("", "ascii", "utf-8", "utf-8-sig", "utf8", "utf8sig", "utf-8sig"):

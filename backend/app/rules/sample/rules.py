@@ -29,8 +29,8 @@ class SampleMatchRule(BaseRule):
 
         if only_matrix or only_meta:
             affected = (
-                [f"In matrix only: {s}" for s in only_matrix[:5]]
-                + [f"In metadata only: {s}" for s in only_meta[:5]]
+                [f"In matrix only: {s}" for s in only_matrix]
+                + [f"In metadata only: {s}" for s in only_meta]
             )
             return self._fail(
                 f"{len(only_matrix)} sample(s) in matrix not in metadata; "
@@ -191,6 +191,13 @@ class NearIdenticalSampleRule(BaseRule):
     def run(self, context: ValidationContext) -> RuleResult:
         if context.count_matrix is None:
             return self._skip("Count matrix not available.")
+        
+        n_genes = context.count_matrix.shape[0]
+        if n_genes < 500:
+            return self._skip(
+                "Skipped: SMP-005 requires at least 500 genes for stable correlation-based replicate diagnostics."
+            )
+
         df = context.count_matrix.apply(pd.to_numeric, errors="coerce").fillna(0)
         if df.shape[1] < 2:
             return self._skip("Fewer than 2 samples; correlation check skipped.")

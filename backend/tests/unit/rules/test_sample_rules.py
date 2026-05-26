@@ -96,7 +96,7 @@ def test_replicate_count_passes_three():
 
 def test_near_identical_fails():
     import numpy as np
-    df = make_count_matrix()
+    df = make_count_matrix(genes=[f"G{i}" for i in range(500)])
     df["ctrl_3"] = df["ctrl_1"]  # exact duplicate
     ctx = _ctx_from_dfs(count_df=df)
     result = NearIdenticalSampleRule().run(ctx)
@@ -104,5 +104,5 @@ def test_near_identical_fails():
 
 
 def test_near_identical_passes():
-    ctx = _ctx_from_dfs(count_df=make_count_matrix())
+    ctx = _ctx_from_dfs(count_df=make_count_matrix(genes=[f"G{i}" for i in range(500)]))
     assert NearIdenticalSampleRule().run(ctx).status == "PASS"

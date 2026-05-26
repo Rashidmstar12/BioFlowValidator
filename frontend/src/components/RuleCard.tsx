@@ -59,6 +59,18 @@ export default function RuleCard({ result }: Props) {
             </ul>
           </div>
         )}
+        {result.details && Object.keys(result.details).length > 0 && (
+          <div className="mt-2">
+            <details className="text-xs">
+              <summary className="cursor-pointer text-indigo-600 hover:text-indigo-800 font-semibold underline mb-1">
+                Show Rule Details
+              </summary>
+              <pre className="bg-slate-50 p-2 rounded border border-slate-200 overflow-x-auto text-[10px] font-mono text-slate-700 whitespace-pre-wrap">
+                {JSON.stringify(result.details, null, 2)}
+              </pre>
+            </details>
+          </div>
+        )}
       </div>
     </details>
   );

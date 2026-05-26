@@ -119,3 +119,34 @@ def test_duplicate_row_fails():
 def test_duplicate_row_passes():
     ctx = _ctx_from_dfs(count_df=make_count_matrix())
     assert DuplicateRowRule().run(ctx).status == "PASS"
+
+
+def test_non_integer_tpm_sums_to_one_million_is_error():
+    genes = [f"G{i}" for i in range(1100)]
+    values = np.random.uniform(0.1, 1000.0, size=(len(genes), 6))
+    values = values / values.sum(axis=0) * 1_000_000
+    df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(6)])
+    ctx = _ctx_from_dfs(count_df=df)
+    result = NonIntegerCountRule().run(ctx)
+    assert result.status == "FAIL"
+    assert result.severity == "ERROR"
+
+
+def test_non_integer_expected_counts_is_warning():
+    genes = [f"G{i}" for i in range(1100)]
+    values = np.random.uniform(0.1, 10000.0, size=(len(genes), 6))
+    df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(6)])
+    ctx = _ctx_from_dfs(count_df=df)
+    result = NonIntegerCountRule().run(ctx)
+    assert result.status == "FAIL"
+    assert result.severity == "WARNING"
+
+
+def test_non_integer_fpkm_is_error():
+    genes = [f"G{i}" for i in range(1100)]
+    values = np.random.uniform(0.1, 10.0, size=(len(genes), 6))
+    df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(6)])
+    ctx = _ctx_from_dfs(count_df=df)
+    result = NonIntegerCountRule().run(ctx)
+    assert result.status == "FAIL"
+    assert result.severity == "ERROR"

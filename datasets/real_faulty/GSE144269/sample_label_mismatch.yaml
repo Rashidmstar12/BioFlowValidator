@@ -6,10 +6,8 @@ expected_fails:
 - rule_id: SMP-001
   severity: ERROR
   min_affected_items: 2
-- rule_id: BIO-001
-  severity: ERROR
-  min_affected_items: 0
 expected_passes: []
-expected_skips: []
+expected_skips:
+- BIO-001
 notes: SMP-001 must FAIL because 2 metadata samples are not in the count matrix and
   2 count matrix samples are not in the metadata.

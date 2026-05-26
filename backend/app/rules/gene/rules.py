@@ -9,9 +9,9 @@ from app.models.context import ValidationContext
 from app.models.rule_result import RuleResult
 from app.rules.base import BaseRule
 
-_ENSEMBL_RE = re.compile(r'^ENSG\d{11}(\.\d+)?$', re.IGNORECASE)
-_ENSEMBL_BASE_RE = re.compile(r'^ENSG\d{11}$', re.IGNORECASE)
-_ENSEMBL_VERSION_RE = re.compile(r'^ENSG\d{11}\.\d+$', re.IGNORECASE)
+_ENSEMBL_RE = re.compile(r'^ENS[A-Z]*G\d{11}(\.\d+)?$', re.IGNORECASE)
+_ENSEMBL_BASE_RE = re.compile(r'^ENS[A-Z]*G\d{11}$', re.IGNORECASE)
+_ENSEMBL_VERSION_RE = re.compile(r'^ENS[A-Z]*G\d{11}\.\d+$', re.IGNORECASE)
 # Multi-species Ensembl ID: ENSG (human), ENSMUSG (mouse), ENSRNOG (rat), ENSDARG (zebrafish), etc.
 _ENSEMBL_ANY_RE = re.compile(r'^ENS[A-Z]*G\d', re.IGNORECASE)
 _ENTREZ_RE = re.compile(r'^\d+$')

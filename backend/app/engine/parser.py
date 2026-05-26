@@ -33,6 +33,13 @@ def _read_tabular(
     data: bytes, filename: str
 ) -> Tuple[Optional[pd.DataFrame], str, str]:
     """Attempt to parse bytes as a tabular file. Returns (df, delimiter, encoding)."""
+    if filename.lower().endswith((".xlsx", ".xls")):
+        try:
+            df = pd.read_excel(io.BytesIO(data), index_col=0)
+            return df, "excel", "binary"
+        except Exception:
+            return None, "excel", "binary"
+
     encoding = _detect_encoding(data)
     try:
         text = data.decode(encoding, errors="replace")

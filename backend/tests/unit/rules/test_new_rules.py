@@ -137,10 +137,10 @@ class TestNearIdenticalSampleRule:
     def test_exact_duplicate_fails(self):
         # Two identical columns — log1p corr = 1.0 ≥ 0.999
         rng = np.random.default_rng(7)
-        vals = rng.integers(1, 1000, size=(100, 1))
+        vals = rng.integers(1, 1000, size=(500, 1))
         df = pd.DataFrame(
             np.hstack([vals, vals, vals + 1, vals + 2]),
-            index=[f"G{i}" for i in range(100)],
+            index=[f"G{i}" for i in range(500)],
             columns=["s1", "s2", "s3", "s4"],
         )
         ctx = _ctx(count_df=df)
@@ -149,7 +149,7 @@ class TestNearIdenticalSampleRule:
 
     def test_genuinely_different_samples_pass(self):
         # Real biological replicates have r ≈ 0.95–0.99 but not ≥ 0.999
-        ctx = _ctx(count_df=make_count_matrix())
+        ctx = _ctx(count_df=make_count_matrix(genes=[f"G{i}" for i in range(500)]))
         assert NearIdenticalSampleRule().run(ctx).status == "PASS"
 
     def test_old_threshold_0999_would_not_trigger_at_0_9999(self):
@@ -254,6 +254,34 @@ class TestMitochondrialFractionRuleOrganismAware:
         # No MT genes in this mouse matrix — should PASS
         assert result.status == "PASS"
 
+    def test_human_mt_ensembl_detected(self):
+        # Human matrix with actual Ensembl MT gene IDs
+        genes = [f"ENSG{i:011d}" for i in range(1, 50)] + [
+            "ENSG00000198888", "ENSG00000198763", "ENSG00000198804"  # MT-ND1, MT-ND2, MT-CO1
+        ]
+        rng = np.random.default_rng(12)
+        values = rng.integers(1, 10, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        for g in ["ENSG00000198888", "ENSG00000198763", "ENSG00000198804"]:
+            df.loc[g] = 2000
+        ctx = _ctx(count_df=df, flags={"organism": "human"})
+        result = MitochondrialFractionRule().run(ctx)
+        assert result.status == "FAIL"
+
+    def test_mouse_mt_ensembl_detected(self):
+        # Mouse matrix with actual Ensembl MT gene IDs
+        genes = [f"ENSMUSG{i:011d}" for i in range(1, 50)] + [
+            "ENSMUSG00000064341", "ENSMUSG00000064345"  # mt-Nd1, mt-Nd2
+        ]
+        rng = np.random.default_rng(13)
+        values = rng.integers(1, 10, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        for g in ["ENSMUSG00000064341", "ENSMUSG00000064345"]:
+            df.loc[g] = 2000
+        ctx = _ctx(count_df=df, flags={"organism": "mouse"})
+        result = MitochondrialFractionRule().run(ctx)
+        assert result.status == "FAIL"
+
 
 # ===========================================================================
 # BIO-006 HousekeepingGeneRule — Ensembl mapping
@@ -267,7 +295,7 @@ class TestHousekeepingGeneRuleEnsembl:
             "ENSG00000111640",  # GAPDH
             "ENSG00000166710",  # B2M
         ]
-        other_ids = [f"ENSG{i:011d}" for i in range(100, 300)]
+        other_ids = [f"ENSG{i:011d}" for i in range(100, 1100)]
         genes = hk_ids + other_ids
         rng = np.random.default_rng(12)
         values = rng.integers(1, 100, size=(len(genes), 4))
@@ -278,7 +306,7 @@ class TestHousekeepingGeneRuleEnsembl:
 
     def test_ensembl_human_missing_all_hk_fails(self):
         # Only non-HK Ensembl IDs — should FAIL
-        genes = [f"ENSG{i:011d}" for i in range(100, 300)]
+        genes = [f"ENSG{i:011d}" for i in range(100, 1100)]
         rng = np.random.default_rng(13)
         values = rng.integers(1, 100, size=(len(genes), 4))
         df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
@@ -293,7 +321,7 @@ class TestHousekeepingGeneRuleEnsembl:
             "ENSG00000111640.15",  # GAPDH versioned
             "ENSG00000166710.17",  # B2M versioned
         ]
-        other_ids = [f"ENSG{i:011d}" for i in range(100, 300)]
+        other_ids = [f"ENSG{i:011d}" for i in range(100, 1100)]
         genes = hk_ids + other_ids
         rng = np.random.default_rng(14)
         values = rng.integers(1, 100, size=(len(genes), 4))
@@ -305,7 +333,7 @@ class TestHousekeepingGeneRuleEnsembl:
     def test_symbol_path_still_works(self):
         # Pure gene symbols — old code path must still work
         symbols = ["ACTB", "GAPDH", "B2M", "HPRT1", "HMBS", "SDHA", "TBP", "RPLP0", "YWHAZ", "PPIA"]
-        other = [f"GENE{i}" for i in range(100)]
+        other = [f"GENE{i}" for i in range(1000)]
         genes = symbols + other
         rng = np.random.default_rng(15)
         values = rng.integers(1, 100, size=(len(genes), 4))
@@ -313,6 +341,56 @@ class TestHousekeepingGeneRuleEnsembl:
         ctx = _ctx(count_df=df)
         result = HousekeepingGeneRule().run(ctx)
         assert result.status == "PASS"
+
+    def test_unsupported_organism_ensembl_skips(self):
+        # Cow Ensembl IDs with organism="cow" — must SKIP the check
+        genes = [f"ENSBTAG{i:011d}" for i in range(1, 1100)]
+        rng = np.random.default_rng(16)
+        values = rng.integers(1, 100, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        ctx = _ctx(count_df=df, flags={"organism": "cow"})
+        result = HousekeepingGeneRule().run(ctx)
+        assert result.status == "SKIP"
+
+    def test_ensembl_zebrafish_with_hk_genes_passes(self):
+        # Zebrafish Ensembl IDs with housekeeping genes present — must PASS
+        zf_hk = ["ENSDARG00000037746", "ENSDARG00000043457", "ENSDARG00000015887", 
+                 "ENSDARG00000008884", "ENSDARG00000008840", "ENSDARG00000016721", 
+                 "ENSDARG00000014994", "ENSDARG00000051783", "ENSDARG00000032575", 
+                 "ENSDARG00000009212"]
+        other = [f"ENSDARG{i:011d}" for i in range(1, 1000)]
+        genes = zf_hk + other
+        rng = np.random.default_rng(18)
+        values = rng.integers(1, 100, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        ctx = _ctx(count_df=df, flags={"organism": "zebrafish"})
+        result = HousekeepingGeneRule().run(ctx)
+        assert result.status == "PASS"
+
+    def test_ensembl_rat_with_hk_genes_passes(self):
+        # Rat Ensembl IDs with housekeeping genes present — must PASS
+        rat_hk = ["ENSRNOG00000010996", "ENSRNOG00000018630", "ENSRNOG00000017123", 
+                  "ENSRNOG00000031367", "ENSRNOG00000010390", "ENSRNOG00000013331", 
+                  "ENSRNOG00000001489", "ENSRNOG00000001148", "ENSRNOG00000008195", 
+                  "ENSRNOG00000027864"]
+        other = [f"ENSRNOG{i:011d}" for i in range(1, 1000)]
+        genes = rat_hk + other
+        rng = np.random.default_rng(17)
+        values = rng.integers(1, 100, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        ctx = _ctx(count_df=df, flags={"organism": "rat"})
+        result = HousekeepingGeneRule().run(ctx)
+        assert result.status == "PASS"
+
+    def test_ensembl_rat_missing_all_hk_fails(self):
+        # Rat Ensembl IDs without housekeeping genes — must FAIL
+        genes = [f"ENSRNOG{i:011d}" for i in range(1, 1100)]
+        rng = np.random.default_rng(18)
+        values = rng.integers(1, 100, size=(len(genes), 4))
+        df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(4)])
+        ctx = _ctx(count_df=df, flags={"organism": "rat"})
+        result = HousekeepingGeneRule().run(ctx)
+        assert result.status == "FAIL"
 
 
 # ===========================================================================
@@ -429,3 +507,33 @@ class TestERCCSpikeInRule:
     def test_no_matrix_skips(self):
         ctx = _ctx()
         assert ERCCSpikeInRule().run(ctx).status == "SKIP"
+
+
+# ===========================================================================
+# Validation Runner Gating
+# ===========================================================================
+
+def test_runner_gating_behavior():
+    from app.engine.runner import run_all
+    # Case A: NRM-001 is a WARNING (expected counts). Downstream rules like NRM-002 should NOT be gated/skipped.
+    genes = [f"ENSG{i:011d}" for i in range(1100)]
+    values = np.random.uniform(0.1, 10000.0, size=(len(genes), 6))
+    df = pd.DataFrame(values, index=genes, columns=[f"s{i}" for i in range(6)])
+    ctx = _ctx(count_df=df)
+    results = run_all(ctx)
+    nrm_001_res = next(r for r in results if r.rule_id == "NRM-001")
+    nrm_002_res = next(r for r in results if r.rule_id == "NRM-002")
+    assert nrm_001_res.status == "FAIL"
+    assert nrm_001_res.severity == "WARNING"
+    assert nrm_002_res.status != "SKIP"  # Not skipped!
+    
+    # Case B: NRM-001 is an ERROR (TPM). Downstream rules like NRM-002 MUST be gated/skipped.
+    values_tpm = values / values.sum(axis=0) * 1_000_000
+    df_tpm = pd.DataFrame(values_tpm, index=genes, columns=[f"s{i}" for i in range(6)])
+    ctx_tpm = _ctx(count_df=df_tpm)
+    results_tpm = run_all(ctx_tpm)
+    nrm_001_tpm_res = next(r for r in results_tpm if r.rule_id == "NRM-001")
+    nrm_002_tpm_res = next(r for r in results_tpm if r.rule_id == "NRM-002")
+    assert nrm_001_tpm_res.status == "FAIL"
+    assert nrm_001_tpm_res.severity == "ERROR"
+    assert nrm_002_tpm_res.status == "SKIP"  # Skipped!

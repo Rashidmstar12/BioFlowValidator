@@ -2,18 +2,18 @@
   "clean_fp_count": 0,
   "clean_violations": [],
   "dataset_modes": {
+    "airway": "proxy",
     "GSE107011": "proxy",
     "GSE144269": "proxy",
     "GSE37704": "proxy",
     "GSE52778": "proxy",
     "GSE60450": "proxy",
     "GSE89189": "proxy",
-    "GSE96870": "proxy",
-    "airway": "proxy"
+    "GSE96870": "proxy"
   },
   "category_metrics": {
     "biology": {
-      "tp": 14,
+      "tp": 12,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -95,7 +95,7 @@
       "f1": 1.0
     },
     "sample_label_mismatch": {
-      "tp": 9,
+      "tp": 8,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -103,7 +103,7 @@
       "f1": 1.0
     },
     "transposed_matrix": {
-      "tp": 9,
+      "tp": 8,
       "fp": 0,
       "fn": 0,
       "precision": 1.0,
@@ -171,6 +171,83 @@
       "ok": true,
       "tp": [
         "GEN-003"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "airway/batch_confounding",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "BIO-007"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "airway/library_size_imbalance",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-002"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "airway/low_replicates",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-004"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "airway/mixed_gene_ids",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "GEN-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "airway/normalized_not_raw",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "NRM-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "airway/sample_label_mismatch",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "SMP-001"
+      ],
+      "fp": [],
+      "fn": [],
+      "violations": []
+    },
+    {
+      "name": "airway/transposed_matrix",
+      "source": "real_faulty",
+      "ok": true,
+      "tp": [
+        "FMT-008"
       ],
       "fp": [],
       "fn": [],
@@ -317,8 +394,7 @@
       "source": "real_faulty",
       "ok": true,
       "tp": [
-        "SMP-001",
-        "BIO-001"
+        "SMP-001"
       ],
       "fp": [],
       "fn": [],
@@ -329,8 +405,7 @@
       "source": "real_faulty",
       "ok": true,
       "tp": [
-        "FMT-008",
-        "BIO-001"
+        "FMT-008"
       ],
       "fp": [],
       "fn": [],
@@ -712,83 +787,6 @@
     },
     {
       "name": "GSE96870/transposed_matrix",
-      "source": "real_faulty",
-      "ok": true,
-      "tp": [
-        "FMT-008"
-      ],
-      "fp": [],
-      "fn": [],
-      "violations": []
-    },
-    {
-      "name": "airway/batch_confounding",
-      "source": "real_faulty",
-      "ok": true,
-      "tp": [
-        "BIO-007"
-      ],
-      "fp": [],
-      "fn": [],
-      "violations": []
-    },
-    {
-      "name": "airway/library_size_imbalance",
-      "source": "real_faulty",
-      "ok": true,
-      "tp": [
-        "NRM-002"
-      ],
-      "fp": [],
-      "fn": [],
-      "violations": []
-    },
-    {
-      "name": "airway/low_replicates",
-      "source": "real_faulty",
-      "ok": true,
-      "tp": [
-        "SMP-004"
-      ],
-      "fp": [],
-      "fn": [],
-      "violations": []
-    },
-    {
-      "name": "airway/mixed_gene_ids",
-      "source": "real_faulty",
-      "ok": true,
-      "tp": [
-        "GEN-001"
-      ],
-      "fp": [],
-      "fn": [],
-      "violations": []
-    },
-    {
-      "name": "airway/normalized_not_raw",
-      "source": "real_faulty",
-      "ok": true,
-      "tp": [
-        "NRM-001"
-      ],
-      "fp": [],
-      "fn": [],
-      "violations": []
-    },
-    {
-      "name": "airway/sample_label_mismatch",
-      "source": "real_faulty",
-      "ok": true,
-      "tp": [
-        "SMP-001"
-      ],
-      "fp": [],
-      "fn": [],
-      "violations": []
-    },
-    {
-      "name": "airway/transposed_matrix",
       "source": "real_faulty",
       "ok": true,
       "tp": [

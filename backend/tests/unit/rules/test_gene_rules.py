@@ -63,6 +63,14 @@ def test_version_suffix_fails():
     assert result.status == "FAIL"
 
 
+def test_version_suffix_fails_mouse_rat():
+    genes_mouse = [f"ENSMUSG{i:011d}.12" for i in range(1, 6)]
+    genes_rat = [f"ENSRNOG{i:011d}.5" for i in range(1, 6)]
+    ctx = _make_ctx(genes_mouse + genes_rat)
+    result = VersionSuffixRule().run(ctx)
+    assert result.status == "FAIL"
+
+
 def test_version_suffix_passes():
     genes = [f"ENSG{i:011d}" for i in range(1, 11)]
     assert VersionSuffixRule().run(_make_ctx(genes)).status == "PASS"

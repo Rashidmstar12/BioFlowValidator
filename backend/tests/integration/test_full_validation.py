@@ -132,3 +132,58 @@ def test_validate_unknown_job():
 def test_results_unknown_job():
     r = client.get("/report/results/does-not-exist")
     assert r.status_code == 404
+
+
+def test_full_validation_valid_excel():
+    import pandas as pd
+    import io
+
+    # Build valid dataframes
+    count_df = pd.DataFrame(
+        {
+            "ctrl_1": [10000, 5000, 30000],
+            "ctrl_2": [11000, 5500, 29000],
+            "ctrl_3": [9000, 4500, 31000],
+            "treat_1": [20000, 15000, 10000],
+            "treat_2": [21000, 14500, 10500],
+            "treat_3": [19000, 15500, 9500]
+        },
+        index=["ENSG00000000001", "ENSG00000000002", "ENSG00000000003"]
+    )
+    meta_df = pd.DataFrame(
+        {
+            "condition": ["control", "control", "control", "treated", "treated", "treated"]
+        },
+        index=["ctrl_1", "ctrl_2", "ctrl_3", "treat_1", "treat_2", "treat_3"]
+    )
+    
+    count_out = io.BytesIO()
+    count_df.to_excel(count_out, index=True)
+    count_bytes = count_out.getvalue()
+
+    meta_out = io.BytesIO()
+    meta_df.to_excel(meta_out, index=True)
+    meta_bytes = meta_out.getvalue()
+
+    # Upload Excel files
+    upload_r = client.post(
+        "/upload",
+        files={
+            "count_matrix": ("counts.xlsx", io.BytesIO(count_bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            "metadata": ("metadata.xlsx", io.BytesIO(meta_bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        },
+    )
+    assert upload_r.status_code == 200
+    job_id = upload_r.json()["job_id"]
+
+    # Validate
+    val_r = client.post("/validate", json={"job_id": job_id})
+    assert val_r.status_code == 200
+    summary = val_r.json()["summary"]
+    # Excel files should parse and run correctly without errors on valid data
+    assert summary["error_count"] == 0
+
+    # Confirm html report includes details
+    html_r = client.get(f"/report/{job_id}")
+    assert html_r.status_code == 200
+    assert "Show Rule Details" in html_r.text

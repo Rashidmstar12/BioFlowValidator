@@ -17,22 +17,30 @@ from app.rules.base import BaseRule
 _ENSEMBL_HUMAN_RE = re.compile(r'^ENSG\d', re.IGNORECASE)
 _ENSEMBL_MOUSE_RE = re.compile(r'^ENSMUSG\d', re.IGNORECASE)
 _ENSEMBL_RAT_RE = re.compile(r'^ENSRNOG\d', re.IGNORECASE)
+_ENSEMBL_ZEBRAFISH_RE = re.compile(r'^ENSDARG\d', re.IGNORECASE)
+_ENSEMBL_CHICKEN_RE = re.compile(r'^ENSGALG\d', re.IGNORECASE)
 
 
 def _detect_organism(gene_ids: list[str]) -> str:
-    """Return 'human', 'mouse', 'rat', or 'unknown' based on Ensembl gene ID prefixes."""
+    """Return 'human', 'mouse', 'rat', 'zebrafish', 'chicken', or 'unknown' based on Ensembl gene ID prefixes."""
     if not gene_ids:
         return "unknown"
     n = len(gene_ids)
     human = sum(1 for g in gene_ids if _ENSEMBL_HUMAN_RE.match(g))
     mouse = sum(1 for g in gene_ids if _ENSEMBL_MOUSE_RE.match(g))
     rat = sum(1 for g in gene_ids if _ENSEMBL_RAT_RE.match(g))
+    zebrafish = sum(1 for g in gene_ids if _ENSEMBL_ZEBRAFISH_RE.match(g))
+    chicken = sum(1 for g in gene_ids if _ENSEMBL_CHICKEN_RE.match(g))
     if human / n > 0.5:
         return "human"
     if mouse / n > 0.5:
         return "mouse"
     if rat / n > 0.5:
         return "rat"
+    if zebrafish / n > 0.5:
+        return "zebrafish"
+    if chicken / n > 0.5:
+        return "chicken"
     return "unknown"
 
 
@@ -47,9 +55,86 @@ _MT_PATTERNS: dict[str, re.Pattern] = {
     "mouse": re.compile(r'^mt-', re.IGNORECASE),
     # RGD: mixed case
     "rat": re.compile(r'^mt-', re.IGNORECASE),
+    # Zebrafish: lowercase mt-
+    "zebrafish": re.compile(r'^mt-', re.IGNORECASE),
+    # Chicken: uppercase or lowercase
+    "chicken": re.compile(r'^(MT-|mt-)', re.IGNORECASE),
     # Fallback: try all
     "unknown": re.compile(r'^MT-', re.IGNORECASE),
 }
+
+# ---------------------------------------------------------------------------
+# Mitochondrial Ensembl IDs (GRCh38 & GRCm39/mm39)
+# Includes rRNAs, tRNAs, and protein-coding genes
+# ---------------------------------------------------------------------------
+
+_HUMAN_MT_ENSEMBL: set[str] = {
+    "ENSG00000198888", "ENSG00000198763", "ENSG00000198804", "ENSG00000198712",
+    "ENSG00000228253", "ENSG00000198899", "ENSG00000198938", "ENSG00000198840",
+    "ENSG00000212907", "ENSG00000198886", "ENSG00000198786", "ENSG00000198695",
+    "ENSG00000198727", "ENSG00000211459", "ENSG00000210082", "ENSG00000210100",
+    "ENSG00000210107", "ENSG00000210112", "ENSG00000210117", "ENSG00000210127",
+    "ENSG00000210135", "ENSG00000210140", "ENSG00000210144", "ENSG00000210151",
+    "ENSG00000210154", "ENSG00000210156", "ENSG00000210164", "ENSG00000210174",
+    "ENSG00000210176", "ENSG00000210184", "ENSG00000210191", "ENSG00000210194",
+    "ENSG00000210195", "ENSG00000210196", "ENSG00000210211", "ENSG00000210228",
+    "ENSG00000210243"
+}
+
+_MOUSE_MT_ENSEMBL: set[str] = {
+    "ENSMUSG00000064341", "ENSMUSG00000064345", "ENSMUSG00000064351", "ENSMUSG00000064354",
+    "ENSMUSG00000064356", "ENSMUSG00000064357", "ENSMUSG00000064358", "ENSMUSG00000064360",
+    "ENSMUSG00000064361", "ENSMUSG00000064363", "ENSMUSG00000064367", "ENSMUSG00000064368",
+    "ENSMUSG00000064370", "ENSMUSG00000064343", "ENSMUSG00000064344", "ENSMUSG00000064342",
+    "ENSMUSG00000064346", "ENSMUSG00000064347", "ENSMUSG00000064348", "ENSMUSG00000064349",
+    "ENSMUSG00000064350", "ENSMUSG00000064352", "ENSMUSG00000064353", "ENSMUSG00000064355",
+    "ENSMUSG00000065947", "ENSMUSG00000064359", "ENSMUSG00000064362", "ENSMUSG00000064364",
+    "ENSMUSG00000064365", "ENSMUSG00000064366", "ENSMUSG00000064369", "ENSMUSG00000064371",
+    "ENSMUSG00000064372", "ENSMUSG00000064373", "ENSMUSG00000064374", "ENSMUSG00000064375",
+    "ENSMUSG00000064376"
+}
+
+_RAT_MT_ENSEMBL: set[str] = {
+    "ENSRNOG00000030644", "ENSRNOG00000031033", "ENSRNOG00000033615", "ENSRNOG00000029707",
+    "ENSRNOG00000031053", "ENSRNOG00000029971", "ENSRNOG00000029042", "ENSRNOG00000034234",
+    "ENSRNOG00000030371", "ENSRNOG00000030700", "ENSRNOG00000031979", "ENSRNOG00000033299",
+    "ENSRNOG00000031766"
+}
+
+_ZEBRAFISH_MT_ENSEMBL: set[str] = {
+    "ENSDARG00000063895", "ENSDARG00000063899", "ENSDARG00000063905", "ENSDARG00000063908",
+    "ENSDARG00000063910", "ENSDARG00000063911", "ENSDARG00000063912", "ENSDARG00000063914",
+    "ENSDARG00000063916", "ENSDARG00000063917", "ENSDARG00000063921", "ENSDARG00000063922",
+    "ENSDARG00000063924"
+}
+
+_CHICKEN_MT_ENSEMBL: set[str] = {
+    # GRCg7b mitochondrial genes (ENSGALG0001...)
+    "ENSGALG00010000002", "ENSGALG00010000003", "ENSGALG00010000004", "ENSGALG00010000005",
+    "ENSGALG00010000006", "ENSGALG00010000007", "ENSGALG00010000008", "ENSGALG00010000009",
+    "ENSGALG00010000010", "ENSGALG00010000011", "ENSGALG00010000012", "ENSGALG00010000013",
+    "ENSGALG00010000014", "ENSGALG00010000015", "ENSGALG00010000016", "ENSGALG00010000017",
+    "ENSGALG00010000018", "ENSGALG00010000019", "ENSGALG00010000020", "ENSGALG00010000021",
+    "ENSGALG00010000022", "ENSGALG00010000023", "ENSGALG00010000024", "ENSGALG00010000025",
+    "ENSGALG00010000026", "ENSGALG00010000027", "ENSGALG00010000028", "ENSGALG00010000029",
+    "ENSGALG00010000030", "ENSGALG00010000031", "ENSGALG00010000032", "ENSGALG00010000033",
+    "ENSGALG00010000034", "ENSGALG00010000035", "ENSGALG00010000036", "ENSGALG00010000037",
+    "ENSGALG00010000038",
+    # GRCg6a mitochondrial genes (ENSGALG0000...)
+    "ENSGALG00000041922", "ENSGALG00000036956", "ENSGALG00000032059", "ENSGALG00000043598",
+    "ENSGALG00000040296", "ENSGALG00000042750", "ENSGALG00000035975", "ENSGALG00000029193",
+    "ENSGALG00000038760", "ENSGALG00000043768", "ENSGALG00000035685", "ENSGALG00000035392",
+    "ENSGALG00000033139", "ENSGALG00000034813", "ENSGALG00000037641", "ENSGALG00000032142",
+    "ENSGALG00000033462", "ENSGALG00000031197", "ENSGALG00000032456", "ENSGALG00000038283",
+    "ENSGALG00000032465", "ENSGALG00000041091", "ENSGALG00000035334", "ENSGALG00000038243",
+    "ENSGALG00000030436", "ENSGALG00000037369", "ENSGALG00000042478", "ENSGALG00000036229",
+    "ENSGALG00000042903", "ENSGALG00000034022", "ENSGALG00000036970", "ENSGALG00000029500",
+    "ENSGALG00000032079", "ENSGALG00000032370", "ENSGALG00000042677", "ENSGALG00000037838",
+    "ENSGALG00000039249"
+}
+
+
+
 
 # ---------------------------------------------------------------------------
 # Housekeeping gene sets
@@ -90,6 +175,62 @@ _MOUSE_HK_ENSEMBL: dict[str, str] = {
     "ENSMUSG00000069516": "Rplp0",
     "ENSMUSG00000028526": "Ywhaz",
     "ENSMUSG00000071866": "Ppia",
+}
+
+# Stable mRatBN7.2 Ensembl IDs for the same genes in rat
+# (RGD orthologues of the Eisenberg & Levanon 2013 human set)
+_RAT_HK_ENSEMBL: dict[str, str] = {
+    "ENSRNOG00000010996": "Actb",
+    "ENSRNOG00000018630": "Gapdh",
+    "ENSRNOG00000017123": "B2m",
+    "ENSRNOG00000031367": "Hprt1",
+    "ENSRNOG00000010390": "Hmbs",
+    "ENSRNOG00000013331": "Sdha",
+    "ENSRNOG00000001489": "Tbp",
+    "ENSRNOG00000001148": "Rplp0",
+    "ENSRNOG00000008195": "Ywhaz",
+    "ENSRNOG00000027864": "Ppia",
+}
+
+_ZEBRAFISH_HK_ENSEMBL: dict[str, str] = {
+    "ENSDARG00000037746": "actb1",
+    "ENSDARG00000037870": "actb2",
+    "ENSDARG00000043457": "gapdh",
+    "ENSDARG00000039914": "gapdhs",
+    "ENSDARG00000015887": "b2ml",
+    "ENSDARG00000008884": "hprt1",
+    "ENSDARG00000008840": "hmbsa",
+    "ENSDARG00000055991": "hmbsb",
+    "ENSDARG00000016721": "sdha",
+    "ENSDARG00000014994": "tbp",
+    "ENSDARG00000051783": "rplp0",
+    "ENSDARG00000032575": "ywhaz",
+    "ENSDARG00000009212": "ppiaa",
+}
+
+_CHICKEN_HK_ENSEMBL: dict[str, str] = {
+    # GRCg7b (latest)
+    "ENSGALG00010021232": "ACTB",
+    "ENSGALG00010022038": "GAPDH",
+    "ENSGALG00010023281": "B2M",
+    "ENSGALG00010015742": "HPRT1",
+    "ENSGALG00010024403": "HMBS",
+    "ENSGALG00010008075": "SDHA",
+    "ENSGALG00010007866": "TBP",
+    "ENSGALG00010021427": "RPLP0",
+    "ENSGALG00010011703": "YWHAZ",
+    "ENSGALG00010018554": "PPIA",
+    # GRCg6a (legacy)
+    "ENSGALG00000009621": "ACTB",
+    "ENSGALG00000014442": "GAPDH",
+    "ENSGALG00000002160": "B2M",
+    "ENSGALG00000006098": "HPRT1",
+    "ENSGALG00000042939": "HMBS",
+    "ENSGALG00000013167": "SDHA",
+    "ENSGALG00000011171": "TBP",
+    "ENSGALG00000023294": "RPLP0",
+    "ENSGALG00000031387": "YWHAZ",
+    "ENSGALG00000028600": "PPIA",
 }
 
 
@@ -302,13 +443,29 @@ class MitochondrialFractionRule(BaseRule):
         organism = context.flags.get("organism") or _detect_organism(gene_ids)
         mt_pattern = _MT_PATTERNS.get(organism, _MT_PATTERNS["unknown"])
 
-        mt_mask = pd.Series(
-            [bool(mt_pattern.match(str(g))) for g in df.index], index=df.index
-        )
+        mt_mask_list = []
+        for g in df.index:
+            g_str = str(g)
+            g_stripped = g_str.split(".")[0].upper()
+            if organism == "mouse" and g_stripped in _MOUSE_MT_ENSEMBL:
+                mt_mask_list.append(True)
+            elif organism == "rat" and g_stripped in _RAT_MT_ENSEMBL:
+                mt_mask_list.append(True)
+            elif organism == "zebrafish" and g_stripped in _ZEBRAFISH_MT_ENSEMBL:
+                mt_mask_list.append(True)
+            elif organism == "chicken" and g_stripped in _CHICKEN_MT_ENSEMBL:
+                mt_mask_list.append(True)
+            elif (organism in ("human", "unknown")) and g_stripped in _HUMAN_MT_ENSEMBL:
+                mt_mask_list.append(True)
+            elif bool(mt_pattern.match(g_str)):
+                mt_mask_list.append(True)
+            else:
+                mt_mask_list.append(False)
+
+        mt_mask = pd.Series(mt_mask_list, index=df.index)
         if mt_mask.sum() == 0:
             return self._pass(
-                f"No mitochondrial genes detected (organism={organism!r}, "
-                f"pattern='{mt_pattern.pattern}'). Check may not be applicable."
+                f"No mitochondrial genes detected (organism={organism!r}). Check may not be applicable."
             )
 
         lib_sizes = df.sum(axis=0)
@@ -352,6 +509,12 @@ class HousekeepingGeneRule(BaseRule):
         if context.count_matrix is None:
             return self._skip("Count matrix not available.")
 
+        n_genes = context.count_matrix.shape[0]
+        if n_genes < 1000:
+            return self._skip(
+                "Skipped: BIO-006 is only meaningful for near-complete transcriptome matrices (>=1000 genes)."
+            )
+
         raw_ids = [str(g) for g in context.count_matrix.index]
         # Normalise to uppercase for comparison
         gene_ids_upper = {g.upper() for g in raw_ids}
@@ -365,9 +528,18 @@ class HousekeepingGeneRule(BaseRule):
             organism = context.flags.get("organism") or _detect_organism(raw_ids)
             if organism == "mouse":
                 hk_map = _MOUSE_HK_ENSEMBL
-            else:
-                # Default to human; also catches 'unknown' (most data is human)
+            elif organism == "rat":
+                hk_map = _RAT_HK_ENSEMBL
+            elif organism == "zebrafish":
+                hk_map = _ZEBRAFISH_HK_ENSEMBL
+            elif organism == "chicken":
+                hk_map = _CHICKEN_HK_ENSEMBL
+            elif organism in ("human", "unknown"):
                 hk_map = _HUMAN_HK_ENSEMBL
+            else:
+                return self._skip(
+                    f"Housekeeping gene Ensembl check is not supported for organism '{organism}'."
+                )
 
             stripped_ids = {g.split(".")[0].upper() for g in raw_ids}
             missing_ensembl = {
@@ -398,7 +570,7 @@ class HousekeepingGeneRule(BaseRule):
         # Symbol path — only run if data looks like gene symbols
         symbol_like = sum(
             1 for g in raw_ids
-            if re.match(r'^[A-Z][A-Z0-9\-]{1,}$', g)
+            if re.match(r'^[A-Za-z][A-Za-z0-9\-]{1,}$', g)
         )
         if symbol_like < n * 0.5:
             return self._skip(

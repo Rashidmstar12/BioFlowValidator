@@ -6,10 +6,8 @@ expected_fails:
 - rule_id: FMT-008
   severity: WARNING
   min_affected_items: 1
-- rule_id: BIO-001
-  severity: ERROR
-  min_affected_items: 0
 expected_passes: []
-expected_skips: []
+expected_skips:
+- BIO-001
 notes: FMT-008 must FAIL because n_rows < n_cols and n_rows < 500. Other rules may
   also fire because sample names look like gene IDs.

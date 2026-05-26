@@ -28,18 +28,47 @@ class NonIntegerCountRule(BaseRule):
         non_int = np.sum(flat != np.floor(flat))
         frac = non_int / len(flat)
 
-        if frac > 0.01:  # > 1% non-integer → likely normalised
-            return self._fail(
-                f"{non_int} ({frac*100:.1f}%) values are non-integer. "
-                "This suggests the matrix contains normalised values (RPKM/TPM/CPM) "
-                "rather than raw integer counts.",
-                suggestion=(
-                    "Supply raw integer counts as produced by featureCounts, HTSeq, "
-                    "STAR, or Salmon/tximport. Normalisation is applied internally by "
-                    "DESeq2/edgeR."
-                ),
-                details={"non_integer_count": int(non_int), "fraction": float(frac)},
-            )
+        if frac > 0.01:  # > 1% non-integer → likely normalised or expected counts
+            col_sums = df.sum(axis=0)
+            # Check if all sums are very close to 1,000,000 (typical of TPM/CPM)
+            is_cpm_tpm = all(9.9e5 <= s <= 1.01e6 for s in col_sums)
+            # Check if average library size is very small (typical of FPKM or small subsets)
+            mean_lib_size = col_sums.mean()
+            # If average library size is small (< 500,000)
+            is_fpkm = mean_lib_size < 500000
+
+            if is_cpm_tpm or is_fpkm:
+                # Pre-normalized data is a fatal ERROR
+                return self._fail(
+                    f"{non_int} ({frac*100:.1f}%) values are non-integer, and library depth indicates pre-normalized data. "
+                    "This suggests the matrix contains normalised values (RPKM/TPM/CPM) "
+                    "rather than raw integer counts.",
+                    suggestion=(
+                        "Supply raw integer counts as produced by featureCounts, HTSeq, "
+                        "STAR, or Salmon/tximport. Normalisation is applied internally by "
+                        "DESeq2/edgeR."
+                    ),
+                    details={"non_integer_count": int(non_int), "fraction": float(frac), "mean_library_size": float(mean_lib_size)},
+                )
+            else:
+                # Raw expected counts are only a WARNING
+                return RuleResult(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    severity="WARNING",
+                    status="FAIL",
+                    message=(
+                        f"{non_int} ({frac*100:.1f}%) values are non-integer, but library depth suggests expected counts. "
+                        "This is common for RSEM, Kallisto, or Salmon expected counts. "
+                        "Note that while some downstream DE tools (e.g. edgeR) accept fractional counts, "
+                        "others (e.g. DESeq2) require rounding or import via tximport."
+                    ),
+                    suggestion=(
+                        "If using DESeq2, ensure expected counts are rounded to integers or "
+                        "imported using tximport. edgeR and limma-voom can handle fractional expected counts directly."
+                    ),
+                    details={"non_integer_count": int(non_int), "fraction": float(frac), "mean_library_size": float(mean_lib_size)},
+                )
         return self._pass("Count values are integers (consistent with raw counts).")
 
 

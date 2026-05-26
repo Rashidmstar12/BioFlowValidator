@@ -8,7 +8,7 @@ BioFlowValidator catches common scientific and computational errors in RNA-seq d
 
 ## Features
 
-- ✅ **28 validation rules** across 5 categories (format, sample, gene ID, normalization, biology)
+- ✅ **32 validation rules** across 5 categories (format, sample, gene ID, normalization, biology)
 - 🔬 Detects: sample mismatches, mixed gene ID namespaces, pre-normalized counts, too few replicates, library size outliers, and more
 - 📊 Human-readable HTML report + machine-readable JSON
 - 🚀 REST API (FastAPI) + React/TypeScript frontend
@@ -61,11 +61,11 @@ Open [http://localhost:5173](http://localhost:5173).
 
 | Category | Rules | Description |
 |---|---|---|
-| **Format** | FMT-001 – FMT-007 | Encoding, delimiters, headers, non-numeric values |
-| **Sample** | SMP-001 – SMP-005 | Sample ID matching, duplicates, replicates |
-| **Gene ID** | GEN-001 – GEN-004 | Namespace consistency, duplicates, version suffixes |
-| **Normalization** | NRM-001 – NRM-006 | Integer counts, library sizes, zero genes |
-| **Biology** | BIO-001 – BIO-006 | Single condition, MT fraction, label sanity |
+| **Format** | FMT-001 – FMT-008 | Encoding, delimiters, headers, duplicates, non-negatives, matrix orientation |
+| **Sample** | SMP-001 – SMP-005 | Sample ID matching, duplicates, replicates, near-identical replicate diagnostics |
+| **Gene ID** | GEN-001 – GEN-005 | Namespace consistency, duplicates, version suffixes, organism detection |
+| **Normalization** | NRM-001 – NRM-006 | Integer counts, library size ratios, zero genes, duplicate count profiles |
+| **Biology** | BIO-001 – BIO-008 | Single condition, MT fraction, label sanity, batch confounding, ERCC spike-ins |
 
 See [`docs/validation_rules.md`](docs/validation_rules.md) for the full rule reference.
 
