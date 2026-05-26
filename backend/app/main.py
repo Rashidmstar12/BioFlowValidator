@@ -9,7 +9,7 @@ from app.routers import upload, validate, report
 app = FastAPI(
     title="BioFlowValidator API",
     description="Validates RNA-seq bioinformatics workflows and detects common errors.",
-    version="0.1.0",
+    version="1.0.0",
 )
 
 app.add_middleware(
@@ -28,3 +28,13 @@ app.include_router(report.router, prefix="/report", tags=["report"])
 @app.get("/health", tags=["health"])
 async def health() -> dict:
     return {"status": "ok"}
+
+
+def start() -> None:
+    """CLI entry point: `bioflowvalidator` starts the API server."""
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=False)
+
+
+if __name__ == "__main__":
+    start()
