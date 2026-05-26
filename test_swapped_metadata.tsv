@@ -1,0 +1,7 @@
+sample_id	condition	batch
+ctrl_rep1	control	1
+ctrl_rep2	control	1
+ctrl_rep3	control	2
+treat_rep1	treated	1
+treat_rep2	treated	2
+treat_rep3	treated	2
